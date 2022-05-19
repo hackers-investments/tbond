@@ -16,7 +16,7 @@ module.exports = {
     hardhat:{
       // accounts : account_balance_list,
       forking:{
-        url: "https://mainnet.infura.io/v3/${INFURA_KEY}"
+        url: `https://mainnet.infura.io/v3/${INFURA_KEY}`
       }
     },
   },

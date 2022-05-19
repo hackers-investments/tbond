@@ -9,7 +9,9 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.6.0",
+    "chai": "^4.3.6",
     "dotenv": "^16.0.1",
-    "hardhat": "^2.9.5"
+    "hardhat": "^2.9.5",
+    "hardhat-ethers": "^1.0.1"
   }
 }
