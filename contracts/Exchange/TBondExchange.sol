@@ -23,7 +23,7 @@ contract TBondExchangeV1 is Ownable, EIP712 {
 
     bytes internal personalSignPrefix = "\x19Ethereum Signed Message:\n";
     bytes32 constant ORDER_TYPEHASH = keccak256(
-        "Order(address owner,address token, utin256 amountSellToken,uint256 amountBuyToken,uint256 nonce)"
+        "Order(address owner,address token,utin256 amountSellToken,uint256 amountBuyToken,uint256 nonce)"
     );
 
     struct Order {
@@ -31,11 +31,11 @@ contract TBondExchangeV1 is Ownable, EIP712 {
         address owner;
         /* 거래 대상이 될 TBOND 주소 */
         address token;
-        /* 교환할 TBOND 수량 */
+        /* 판매할 TBOND 수량 */
         uint256 amountSellToken;
-        /* 교환에 사용될 TON 토큰 수량 */
+        /* 매수에 사용할 TON 토큰 수량 */
         uint256 amountBuyToken;
-        /* 재전송 공격을 방지하기 위한 nonce 값 */
+        /* sign을 재사용하는 행위를 방지하기 위한 nonce 값 */
         uint256 nonce;
     }
 
@@ -81,8 +81,8 @@ contract TBondExchangeV1 is Ownable, EIP712 {
     }
 
     /** 
-     * @dev 
-     * @param _hash Order(주문 데이터)를 hashOrder method로 해시한 값
+     * @dev 주문 데이터와 sign의 일치 여부 검증
+     * @param _hash Order(주문 데이터)를 hashOrder()로 해시한 값
      * @param owner 주문 데이터를 생성한 사용자의 주소(주문 데이터에 포함되어 있음)
      * @param signature 매수자가 보낸 매도자 / 매수자의 주문 데이터를 sign 한 값
      */
@@ -117,12 +117,18 @@ contract TBondExchangeV1 is Ownable, EIP712 {
         return false;
     }
 
+    /**
+     * @dev 구매자의 TON을 판매자에게 전송하고, 판매자의 TBOND를 구매자에게 전송
+     * @param makerOrder 판매자의 주문 정보
+     * @param takerOrder 구매자의 주문 정보
+     * @param signatures 판매자와 구매자가 주문 정보를 sign한 값
+     */
     function executeOrder(Order memory makerOrder, Order memory takerOrder, bytes memory signatures) external {
         bytes32 makerOrderHash = hashOrder(makerOrder);
         bytes32 takerOrderHash = hashOrder(takerOrder);
         (bytes memory makerSignature, bytes memory takerSignature) = abi.decode(signatures, (bytes, bytes));
 
-        // [TODO] TBondFactory를 통해 Order의 token이 정상적으로 발행된 TBOND인지 확인
+        // TBondFactory를 통해 makerOrder(판매자가 등록한 주문)의 token이 정상적으로 발행된 TBOND인지 확인
         require(ITBondFactoryV1(factory).tokens(makerOrder.token));
 
         require(makerOrder.token == takerOrder.token);
@@ -133,14 +139,13 @@ contract TBondExchangeV1 is Ownable, EIP712 {
         require(validateOrderAuthorization(makerOrderHash, makerOrder.owner, makerSignature));
         require(validateOrderAuthorization(takerOrderHash, takerOrder.owner, takerSignature));
 
-        // 재전송 공격을 막기 위한 값
         require(makerOrder.nonce == nonces[makerOrder.owner]);
         require(takerOrder.nonce == nonces[takerOrder.owner]);
 
         IERC20(makerOrder.token).safeTransferFrom(makerOrder.owner, takerOrder.owner, makerOrder.amountSellToken);
         IERC20(ton).safeTransferFrom(takerOrder.owner, makerOrder.owner, takerOrder.amountBuyToken);
 
-        // 재전송 공격을 방지하기 위해 거래가 성공한 경우 nonce 값 업데이트
+        // 거래가 성공한 경우 sign을 재사용할 수 없도록 nonce 값 업데이트
         unchecked {
             nonces[makerOrder.owner] += 1;
             nonces[takerOrder.owner] += 1;
@@ -153,6 +158,7 @@ contract TBondExchangeV1 is Ownable, EIP712 {
      * nonce는 sign을 재사용하는 문제를 해결하기 위해 존재함.
      * 토큰의 거래 가격을 낮추는 경우엔 문제가 없지만, (이 경우 어뷰저가 오히려 높은 가격에 매수하기 때문에...)
      * 가격을 높이게 되면 이전에 낮게 설정한 주문 데이터와 sign을 재사용할 수 있기 때문에 nonce를 업데이트 해야함.
+     * NOTE: 주문을 취소하거나, 가격을 높게 변경할 때는 **무조건** updateNonce()를 통해 nonce 값을 변경해야함.
      */ 
     function updateNonce() external {
         unchecked {

@@ -8,8 +8,14 @@ import {TBondFundManagerV1} from "./TBondFundManagerV1.sol";
 contract TBondFactoryV1 is Ownable {
     mapping (address => bool) public tokens;
 
-    function create(address _registry, string memory name, string memory symbol) onlyOwner external {
-        address tbondAddress = address(new TBondFundManagerV1(_registry, name, symbol));
+    function create(address _registry, string memory name, string memory symbol)
+        onlyOwner
+        external
+        returns(address tbondAddress)
+    {
+        tbondAddress = address(new TBondFundManagerV1(_registry, name, symbol));
+        TBondFundManagerV1(tbondAddress).changeManager(_msgSender());
+
         tokens[tbondAddress] = true;
     }
 }

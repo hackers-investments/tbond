@@ -36,8 +36,6 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
     address public depositManager;
     address public stakeRegistry;
 
-    address public incentiveTo;
-
     enum FundingStatus {
         NONE,
         FUNDRAISING,
@@ -54,13 +52,16 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
     uint256 public fundraisingEndBlockNumber;
     uint256 public stakingEndBlockNumber;
 
-    /// @dev 스테이킹이 끝난 뒤 컨트랙트에 쌓인 TON 토큰 수량
+    /* FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량(10,000 TON) */
+    uint256 public constant minimumDeposit = 10000 ** 18;
+    /* 스테이킹이 끝난 뒤 컨트랙트에 쌓인 TON 토큰 수량 */
     uint256 public claimedTONAmount;
-    /// @dev deposit된 TON 토큰의 수량
+    /* deposit된 TON 토큰의 수량 */
     uint256 public depositedTONAmount;
-
-    /// @dev FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량(10,000 TON)
-    uint256 public constant minimumAmount = 10000000000000000000000;
+    /* FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량 */
+    uint256 public operatorDeposit;
+    /* 인센티브를 지급할 주소 */
+    address public incentiveTo;
 
     /**
      * @param _registry    Tokamak Network의 주요 변수들이 저장된 컨트랙트(TONStarter의 StakeRegistry)
@@ -134,7 +135,12 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
      * - setup() method를 호출하는 관리자는 minimumAmount만큼의 TON 토큰을 보유하고 있어야 하며,
      * minimumAmount만큼의 TON 토큰을 컨트랙트에 approve 해줘야함
      */
-    function setup(address _layer2Operator, uint256 _fundraisingPeriod, uint256 _minTONAmount, uint256 _stakingPeriod)
+    function setup(
+        address _layer2Operator,
+        uint256 _fundraisingPeriod,
+        uint256 _minTONAmount,
+        uint256 _stakingPeriod
+    )
         onlyRole(MANAGER_ROLE)
         nonZeroAddress(_layer2Operator)
         nonZero(_fundraisingPeriod)
@@ -146,8 +152,8 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
         require(block.number < fundraisingEndBlockNumber, "FundManagerV1:fundraising is over");
 
         // 관리자가 최수 수량(minimumAmount)을 deposit 해서 펀딩에 같이 참여하도록 설계
-        IERC20(ton).safeTransferFrom(_msgSender(), address(this), minimumAmount);
-        _mint(_msgSender(), minimumAmount);
+        IERC20(ton).safeTransferFrom(_msgSender(), address(this), minimumDeposit);
+        _mint(_msgSender(), minimumDeposit);
 
         fundStatus = FundingStatus.FUNDRAISING;
         layer2Operator = _layer2Operator;
@@ -193,7 +199,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
      *
      * NOTE: 펀딩된 TON 토큰 수량의 0.3%만큼의 TBOND를 추가 발행해서 인센티브로 지급
      */
-    function stake() onlyRole(MANAGER_ROLE) external {
+    function stake() external {
         require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
 
         uint balance = ITON(ton).balanceOf(address(this));
@@ -205,8 +211,9 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
         // constructor에서 설정되는 stakingPeriod(블록 개수) 동안 스테이킹
         stakingEndBlockNumber = block.number + stakingPeriod;
                 
-        // 팀에 인센티브 TBOND 할당
-        giveIncentive(balance);
+        // 인센티브 TBOND 할당
+        if (incentiveTo != address(0))
+            giveIncentive(balance);
 
         /// TONStarter의 contracts/connection/TokamakStaker.sol 컨트랙트 참고
         /// 1) TON -> WTON swap
@@ -225,7 +232,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
      * 
      * - staking 후 지정된 블록(stakingPeriod)이 지난 뒤 호출 가능
      */
-    function unstake() onlyRole(MANAGER_ROLE) external {
+    function unstake() external {
         require(fundStatus == FundingStatus.STAKING, "FundManagerV1:only be called in STAKING");
         require(stakingEndBlockNumber <= block.number, "FundManagerV1:funding is not end yet");
         
@@ -256,7 +263,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
      * 
      * - unstaking 후 지정된 블록(withdrawDelay)이 지난 뒤 호출 가능
      */
-    function withdraw() onlyRole(MANAGER_ROLE) external {
+    function withdraw() external {
         require(fundStatus == FundingStatus.UNSTAKING, "FundManagerV1:only be called in UNSTAKING");
         require(withdrawBlockNumber <= block.number, "FundManagerV1:unstaking is not ended yet");
         
