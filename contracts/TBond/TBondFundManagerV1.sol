@@ -12,8 +12,6 @@ import {IWTON} from "../interfaces/IWTON.sol";
 import {ICandidate} from "../interfaces/ICandidate.sol";
 import {IDepositManager} from "../interfaces/IDepositManager.sol";
 
-import "hardhat/console.sol";
-
 interface ITokamakRegistry {
     function getTokamak()
         external
@@ -293,7 +291,6 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
             "FundManagerV1:only be called in END or FUNDRAISING was failed");
 
         uint256 withdrawAmount = claimedTONAmount * amount / depositedTONAmount;
-        console.log(withdrawAmount / (10 ** 18));
 
         _burn(_msgSender(), amount);
 
