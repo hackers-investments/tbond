@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
 
-describe("build exchange contract", function () {
+describe("Test for TBondExchangeV1 contract", function () {
     it("", async function () {
       const Factory = await ethers.getContractFactory("TBondFactoryV1");
       const factory = await Factory.deploy();
