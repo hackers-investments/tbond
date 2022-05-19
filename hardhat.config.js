@@ -1,3 +1,4 @@
+require("hardhat-gas-reporter");
 require("@nomiclabs/hardhat-waffle");
 // require('hardhat-contract-sizer');
 const { task } = require("hardhat/config");
