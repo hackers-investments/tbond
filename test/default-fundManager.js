@@ -118,9 +118,10 @@ describe("Test for TBondFundManagerV1 contract", function () {
 
         await fundManager.stake();
 
-        // stake() method 호출 후 인센티브가 지급되는지 확인
+        // stake() method 호출 후 인센티브(0.3%)가 지급되는지 확인
         const onwerTbondBalanceAfterStake = parseFloat(ethers.utils.formatEther(await fundManager.balanceOf(owner.address)));
-        expect(onwerTbondBalanceAfterStake).to.above(onwerTbondBalanceBeforeStake);
+        let expectedOnwerTbondBalanceAfterStake = onwerTbondBalanceBeforeStake + parseFloat(ethers.utils.formatEther(inverstorDepositTonBalance)) * 0.003;
+        expect(onwerTbondBalanceAfterStake).to.equal(expectedOnwerTbondBalanceAfterStake);
 
         // 스테이킹 종료 기간까지 블록 생성, 0x2710(100000)
         await network.provider.send("hardhat_mine", ["0x2710"]);
@@ -134,7 +135,12 @@ describe("Test for TBondFundManagerV1 contract", function () {
 
         // claim() method 호출 후 investor의 잔고가 증가했는지 확인
         await fundManager.connect(investor).claim(investorTbondBalance);
-        const investorClaimedTonBalance = parseFloat(ethers.utils.formatEther(await ton.balanceOf(investor.address)));
-        expect(investorClaimedTonBalance).to.above(investorTonBalance);
+        const investorTonBalanceAfterClaim = parseFloat(ethers.utils.formatEther(await ton.balanceOf(investor.address)));
+        expect(investorTonBalanceAfterClaim).to.above(investorTonBalance);
+
+        // claim() method 호출 후 onwer의 잔고가 증가했는지 확인
+        await fundManager.connect(owner).claim(ethers.utils.parseEther(onwerTbondBalanceAfterStake.toString()));
+        const onwerTonBalanceAfterClaim = parseFloat(ethers.utils.formatEther(await ton.balanceOf(owner.address)));
+        expect(onwerTonBalanceAfterClaim).to.above(parseFloat(ethers.utils.formatEther(ownerTonBalance)));
     });
   });
