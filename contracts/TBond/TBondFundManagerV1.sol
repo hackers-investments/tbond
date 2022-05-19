@@ -12,6 +12,8 @@ import {IWTON} from "../interfaces/IWTON.sol";
 import {ICandidate} from "../interfaces/ICandidate.sol";
 import {IDepositManager} from "../interfaces/IDepositManager.sol";
 
+import "hardhat/console.sol";
+
 interface ITokamakRegistry {
     function getTokamak()
         external
@@ -53,7 +55,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
     uint256 public stakingEndBlockNumber;
 
     /* FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량(10,000 TON) */
-    uint256 public constant minimumDeposit = 10000 ** 18;
+    uint256 public constant minimumDeposit = 10000 * (10 ** 18);
     /* 스테이킹이 끝난 뒤 컨트랙트에 쌓인 TON 토큰 수량 */
     uint256 public claimedTONAmount;
     /* deposit된 TON 토큰의 수량 */
@@ -122,6 +124,17 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
             "FundManagerV1:tokamak network error"
         );
     }
+    
+    /**
+     * @dev 컨트랙트에 모인 TON을 스테이킹 하기 직전에 1번만 호출되며,
+     * 정해진 수수료(0.3%)만큼의 TBOND를 추가 발행해서 지정된 지갑으로 전송
+     * @param balance 펀딩된 TON 토큰 수량
+     */
+    function giveIncentive(uint256 balance) internal {
+        // rounding error를 최소화하기 위해 1000000(1e6) 사용
+        uint256 incentiveAmount = balance * (1000000 - 997000) / 1000000;
+        _mint(incentiveTo, incentiveAmount);
+    }
 
     /**
      * @dev 컨트랙트 동작에 필요한 변수들 초기화하고, 관리자 지갑에서 minimumAmount만큼의 TON 토큰 출금
@@ -149,7 +162,6 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
         external
     {
         require(fundStatus == FundingStatus.NONE, "FundManagerV1:only be called in NONE");
-        require(block.number < fundraisingEndBlockNumber, "FundManagerV1:fundraising is over");
 
         // 관리자가 최수 수량(minimumAmount)을 deposit 해서 펀딩에 같이 참여하도록 설계
         IERC20(ton).safeTransferFrom(_msgSender(), address(this), minimumDeposit);
@@ -180,17 +192,6 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
     }
 
     /**
-     * @dev 컨트랙트에 모인 TON을 스테이킹 하기 직전에 1번만 호출되며,
-     * 정해진 수수료(0.3%)만큼의 TBOND를 추가 발행해서 지정된 지갑으로 전송
-     * @param balance 펀딩된 TON 토큰 수량
-     */
-    function giveIncentive(uint256 balance) internal {
-        // rounding error를 최소화하기 위해 1000000(1e6) 사용
-        uint256 incentiveAmount = balance * (1000000 - 997000) / 1000000;
-        _mint(incentiveTo, incentiveAmount);
-    }
-
-    /**
      * @dev 컨트랙트에 모인 TON 토큰을 지정된 layer2 operator에게 staking
      *
      * Requirements:
@@ -203,7 +204,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
         require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
 
         uint balance = ITON(ton).balanceOf(address(this));
-        require(balance < minTONAmount, "FundManagerV1:not enough TON");
+        require(balance >= minTONAmount, "FundManagerV1:not enough TON");
 
         fundStatus = FundingStatus.STAKING;
         depositedTONAmount = balance;
@@ -213,7 +214,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
                 
         // 인센티브 TBOND 할당
         if (incentiveTo != address(0))
-            giveIncentive(balance);
+            giveIncentive(balance - minimumDeposit);
 
         /// TONStarter의 contracts/connection/TokamakStaker.sol 컨트랙트 참고
         /// 1) TON -> WTON swap
@@ -292,6 +293,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
             "FundManagerV1:only be called in END or FUNDRAISING was failed");
 
         uint256 withdrawAmount = claimedTONAmount * amount / depositedTONAmount;
+        console.log(withdrawAmount / (10 ** 18));
 
         _burn(_msgSender(), amount);
 

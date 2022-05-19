@@ -23,14 +23,14 @@ contract TBondExchangeV1 is Ownable, EIP712 {
 
     bytes internal personalSignPrefix = "\x19Ethereum Signed Message:\n";
     bytes32 constant ORDER_TYPEHASH = keccak256(
-        "Order(address owner,address token,utin256 amountSellToken,uint256 amountBuyToken,uint256 nonce)"
+        "Order(address owner,bytes32 key,utin256 amountSellToken,uint256 amountBuyToken,uint256 nonce)"
     );
 
     struct Order {
         /* 주문을 생성한 사용자의 주소 */
         address owner;
         /* 거래 대상이 될 TBOND 주소 */
-        address token;
+        bytes32 key;
         /* 판매할 TBOND 수량 */
         uint256 amountSellToken;
         /* 매수에 사용할 TON 토큰 수량 */
@@ -73,7 +73,7 @@ contract TBondExchangeV1 is Ownable, EIP712 {
         return keccak256(abi.encode(
             ORDER_TYPEHASH,
             order.owner,
-            order.token,
+            order.key,
             order.amountSellToken,
             order.amountBuyToken,
             order.nonce
@@ -129,9 +129,10 @@ contract TBondExchangeV1 is Ownable, EIP712 {
         (bytes memory makerSignature, bytes memory takerSignature) = abi.decode(signatures, (bytes, bytes));
 
         // TBondFactory를 통해 makerOrder(판매자가 등록한 주문)의 token이 정상적으로 발행된 TBOND인지 확인
-        require(ITBondFactoryV1(factory).tokens(makerOrder.token));
+        address token = ITBondFactoryV1(factory).tokens(makerOrder.key);
+        require(token != address(0));
 
-        require(makerOrder.token == takerOrder.token);
+        require(makerOrder.key == takerOrder.key);
         require(makerOrder.amountSellToken == takerOrder.amountSellToken);
         require(makerOrder.amountBuyToken == takerOrder.amountBuyToken);
 
@@ -142,7 +143,7 @@ contract TBondExchangeV1 is Ownable, EIP712 {
         require(makerOrder.nonce == nonces[makerOrder.owner]);
         require(takerOrder.nonce == nonces[takerOrder.owner]);
 
-        IERC20(makerOrder.token).safeTransferFrom(makerOrder.owner, takerOrder.owner, makerOrder.amountSellToken);
+        IERC20(token).safeTransferFrom(makerOrder.owner, takerOrder.owner, makerOrder.amountSellToken);
         IERC20(ton).safeTransferFrom(takerOrder.owner, makerOrder.owner, takerOrder.amountBuyToken);
 
         // 거래가 성공한 경우 sign을 재사용할 수 없도록 nonce 값 업데이트
