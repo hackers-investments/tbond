@@ -56,8 +56,8 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
     uint256 public constant minimumDeposit = 10000 * (10 ** 18);
     /* 스테이킹이 끝난 뒤 컨트랙트에 쌓인 TON 토큰 수량 */
     uint256 public claimedTONAmount;
-    /* deposit된 TON 토큰의 수량 */
-    uint256 public depositedTONAmount;
+    /* 발행된 TBOND 토큰의 수량 */
+    uint256 public issuedTbondAmount;
     /* FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량 */
     uint256 public operatorDeposit;
     /* 인센티브를 지급할 주소 */
@@ -205,7 +205,6 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
         require(balance >= minTONAmount, "FundManagerV1:not enough TON");
 
         fundStatus = FundingStatus.STAKING;
-        depositedTONAmount = balance;
 
         // constructor에서 설정되는 stakingPeriod(블록 개수) 동안 스테이킹
         stakingEndBlockNumber = block.number + stakingPeriod;
@@ -213,6 +212,8 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
         // 인센티브 TBOND 할당
         if (incentiveTo != address(0))
             giveIncentive(balance - minimumDeposit);
+
+        issuedTbondAmount = totalSupply();
 
         /// TONStarter의 contracts/connection/TokamakStaker.sol 컨트랙트 참고
         /// 1) TON -> WTON swap
@@ -290,7 +291,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
                     block.number > fundraisingEndBlockNumber),
             "FundManagerV1:only be called in END or FUNDRAISING was failed");
 
-        uint256 withdrawAmount = claimedTONAmount * amount / depositedTONAmount;
+        uint256 withdrawAmount = claimedTONAmount * amount / issuedTbondAmount;
 
         _burn(_msgSender(), amount);
 
