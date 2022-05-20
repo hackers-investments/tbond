@@ -18,8 +18,8 @@ async function getTon(account, amount) {
 
   // swap ETH -> WETH
   await weth.connect(account).deposit(overrides={value: ethers.utils.parseEther(amount)});
-  let balance = await weth.callStatic.balanceOf(account.address);
-  expect(parseFloat(ethers.utils.formatEther(balance))).to.equal(parseFloat(amount));
+  let balance = await weth.balanceOf(account.address);
+  expect(ethToFloat(balance)).to.equal(parseFloat(amount));
 
   await weth.connect(account).approve(SWAPROUTER, balance);
 
@@ -46,7 +46,7 @@ async function getTon(account, amount) {
     "IWTON",
     WTON
   );
-  const wtonBalance = await wton.callStatic.balanceOf(account.address);
+  const wtonBalance = await wton.balanceOf(account.address);
   expect(parseInt(ethers.utils.formatUnits(wtonBalance, 27))).to.above(0);
 
   // swap WTON -> TON
@@ -57,7 +57,7 @@ async function getTon(account, amount) {
     TON
   );
   
-  let tonBalance = await ton.callStatic.balanceOf(account.address);
+  let tonBalance = await ton.balanceOf(account.address);
   expect(
     parseFloat(ethers.utils.formatUnits(tonBalance, 18))
   ).to.equal(
@@ -67,7 +67,12 @@ async function getTon(account, amount) {
   return tonBalance;
 }
 
-describe("Test for TBondFundManagerV1 contract", function () {
+function ethToFloat(eth)
+{
+  return parseFloat(ethers.utils.formatEther(eth));
+}
+
+describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1 contract", function () {
     it("", async function () {
         const [owner, investor] = await ethers.getSigners();
 
@@ -75,20 +80,19 @@ describe("Test for TBondFundManagerV1 contract", function () {
         const factory = await Factory.deploy();
         await factory.deployed();
 
-        const k = await factory.getKey(owner.address, "TBOND-22051901", "TBOND");
-        await factory.create(TOKAMAK_REGISTRY, k, "TBOND-22051901", "TBOND");
+        const key = await factory.getKey(owner.address, "TBOND-22051901", "TBOND");
+        await factory.create(TOKAMAK_REGISTRY, "TBOND-22051901", "TBOND");
 
-        const fundManagerAddr = await factory.tokens(k);
+        const fundManagerAddr = await factory.tokens(key);
 
         const fundManager = await ethers.getContractAt(
             "TBondFundManagerV1",
             fundManagerAddr
         );
 
-        // owner account에서 FundManager 컨트랙트 생성
         const ownerTonBalance = await getTon(owner, '20');
         const minimumDeposit = await fundManager.minimumDeposit();
-        expect(parseFloat(ethers.utils.formatEther(minimumDeposit))).to.below(parseFloat(ethers.utils.formatEther(ownerTonBalance)));
+        expect(ethToFloat(minimumDeposit)).to.below(ethToFloat(ownerTonBalance));
 
         const ton = await ethers.getContractAt(
           "IERC20",
@@ -100,7 +104,7 @@ describe("Test for TBondFundManagerV1 contract", function () {
             ethers.utils.parseEther('1000'), // _minTONAmount
             10000  // _stakingPeriod
         );
-        const onwerTbondBalanceBeforeStake = parseFloat(ethers.utils.formatEther(await fundManager.balanceOf(owner.address)));
+        const onwerTbondBalanceBeforeStake = await fundManager.balanceOf(owner.address);
 
         // 인센티브를 수령할 account 설정(minimumDeposit을 제외한 물량의 0.3%)
         await fundManager.setIncentiveTo(owner.address);
@@ -109,19 +113,19 @@ describe("Test for TBondFundManagerV1 contract", function () {
 
         // investor account에서 FundManager에 deposit한 TON만큼 TBOND를 수령하는지 확인
         await getTon(investor, '10');
-        const investorTonBalance = parseFloat(ethers.utils.formatEther(await ton.balanceOf(investor.address)));
+        const investorTonBalance = await ton.balanceOf(investor.address);
         const inverstorDepositTonBalance = ethers.utils.parseEther('1000');
         await ton.connect(investor).approve(fundManager.address, inverstorDepositTonBalance);
         await fundManager.connect(investor).deposit(inverstorDepositTonBalance);
         const investorTbondBalance = await fundManager.balanceOf(investor.address);
-        expect(parseFloat(ethers.utils.formatEther(investorTbondBalance))).to.equal(parseFloat(ethers.utils.formatEther(inverstorDepositTonBalance)));
+        expect(ethToFloat(investorTbondBalance)).to.equal(ethToFloat(inverstorDepositTonBalance));
 
         await fundManager.stake();
 
-        // stake() method 호출 후 인센티브(0.3%)가 지급되는지 확인
-        const onwerTbondBalanceAfterStake = parseFloat(ethers.utils.formatEther(await fundManager.balanceOf(owner.address)));
-        let expectedOnwerTbondBalanceAfterStake = onwerTbondBalanceBeforeStake + parseFloat(ethers.utils.formatEther(inverstorDepositTonBalance)) * 0.003;
-        expect(onwerTbondBalanceAfterStake).to.equal(expectedOnwerTbondBalanceAfterStake);
+        // stake() method 호출 후 인센티브(0.3%)가 지급되었는지 확인
+        const onwerTbondBalanceAfterStake = await fundManager.balanceOf(owner.address);
+        let expectedOnwerTbondBalanceAfterStake = ethToFloat(onwerTbondBalanceBeforeStake) + ethToFloat(inverstorDepositTonBalance) * 0.003;
+        expect(ethToFloat(onwerTbondBalanceAfterStake)).to.equal(expectedOnwerTbondBalanceAfterStake);
 
         // 스테이킹 종료 기간까지 블록 생성, 0x2710(100000)
         await network.provider.send("hardhat_mine", ["0x2710"]);
@@ -135,12 +139,12 @@ describe("Test for TBondFundManagerV1 contract", function () {
 
         // claim() method 호출 후 investor의 잔고가 증가했는지 확인
         await fundManager.connect(investor).claim(investorTbondBalance);
-        const investorTonBalanceAfterClaim = parseFloat(ethers.utils.formatEther(await ton.balanceOf(investor.address)));
-        expect(investorTonBalanceAfterClaim).to.above(investorTonBalance);
+        const investorTonBalanceAfterClaim = await ton.balanceOf(investor.address);
+        expect(ethToFloat(investorTonBalanceAfterClaim)).to.above(ethToFloat(investorTonBalance));
 
         // claim() method 호출 후 onwer의 잔고가 증가했는지 확인
-        await fundManager.connect(owner).claim(ethers.utils.parseEther(onwerTbondBalanceAfterStake.toString()));
-        const onwerTonBalanceAfterClaim = parseFloat(ethers.utils.formatEther(await ton.balanceOf(owner.address)));
-        expect(onwerTonBalanceAfterClaim).to.above(parseFloat(ethers.utils.formatEther(ownerTonBalance)));
+        await fundManager.connect(owner).claim(onwerTbondBalanceAfterStake);
+        const onwerTonBalanceAfterClaim = await ton.balanceOf(owner.address);
+        expect(ethToFloat(onwerTonBalanceAfterClaim)).to.above(ethToFloat(ownerTonBalance));
     });
   });
