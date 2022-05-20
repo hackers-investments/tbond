@@ -6,7 +6,7 @@ use(solidity);
 
 const TOKAMAK_REGISTRY = "0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367";
 
-describe("TBondFactoryV1", () => {
+describe("Tests for TBondFactoryV1", () => {
     let owner1;
     let owner2;
     let factory;
@@ -47,8 +47,8 @@ describe("TBondFactoryV1", () => {
         await factory.create(TOKAMAK_REGISTRY, NAME, SYMBOL);
         const key = await factory.getKey(owner1.address, NAME, SYMBOL);
         const tbond = await ethers.getContractAt(
-          "ERC20",
-          await factory.tokens(key)
+            "ERC20",
+            await factory.tokens(key)
         );
 
         const name = await tbond.name();
@@ -56,4 +56,4 @@ describe("TBondFactoryV1", () => {
         expect(name).to.equal(NAME);
         expect(symbol).to.equal(SYMBOL);
     });
-  });
+});

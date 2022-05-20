@@ -1,8 +1,8 @@
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
 
-const SwapRouterJson = require("@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json");
 const WethJson = require("./weth.json");
+const SwapRouterJson = require("./SwapRouter.json");
 
 describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", function () {
   const TOKAMAK_REGISTRY = "0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367";  // StakeRegistry
@@ -59,9 +59,9 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
       );
       await ton.approve(fundManager.address, minimumDeposit);
       await fundManager.setup(LAYER2_ADDRESS,
-          1000, // fundRaisingPeriod
-          ethers.utils.parseEther('1000'), // _minTONAmount
-          10000  // _stakingPeriod 
+          1000,   // fundRaisingPeriod
+          10000,  // _stakingPeriod 
+          ethers.utils.parseEther('1000') // _minTONAmount
       );
       ownerTbondBalanceBeforeStake = await fundManager.balanceOf(owner.address);
   });
