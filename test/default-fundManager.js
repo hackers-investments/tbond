@@ -1,6 +1,8 @@
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
+
 const SwapRouterJson = require("@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json");
+const WethJson = require("./weth.json");
 
 describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", function () {
   const TOKAMAK_REGISTRY = "0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367";  // StakeRegistry
@@ -124,7 +126,7 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
     const SWAPROUTER = '0xE592427A0AEce92De3Edee1F18E0157C05861564';		    // Uniswap V3 SwapRouter
 
     const weth = await ethers.getContractAt(
-      "IWETH",
+      WethJson.abi,
       WETH9
     );
 
