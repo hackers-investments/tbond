@@ -1,5 +1,6 @@
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
+const utils = require("./utils");
 
 const WethJson = require("./weth.json");
 const SwapRouterJson = require("./SwapRouter.json");
@@ -22,14 +23,14 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
   before(async function () {
     [owner, investor] = await ethers.getSigners();
 
-    await getTon(owner, '20');
+    await utils.getTon(owner, '20');
     ton = await ethers.getContractAt(
       "IERC20",
       TON
     );
     ownerTonBalance = await ton.balanceOf(owner.address);
 
-    await getTon(investor, '10');
+    await utils.getTon(investor, '10');
     investorTonBalance = await ton.balanceOf(investor.address);
   });
 
@@ -77,7 +78,9 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
       await ton.connect(investor).approve(fundManager.address, investorDepositTonBalance);
       await fundManager.connect(investor).deposit(investorDepositTonBalance);
       const investorTbondBalance = await fundManager.balanceOf(investor.address);
-      expect(ethToFloat(investorTbondBalance)).to.equal(ethToFloat(investorDepositTonBalance));
+      expect(utils.ethToFloat(investorTbondBalance)).to.equal(utils.ethToFloat(investorDepositTonBalance));
+
+      await network.provider.send("hardhat_mine", ["0x3e8"]);
 
       await fundManager.stake();
   });
@@ -85,8 +88,8 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
   it("5. check incentive after stake", async function () {
       // stake() method 호출 후 인센티브(0.3%)가 지급되었는지 확인
       const onwerTbondBalanceAfterStake = await fundManager.balanceOf(owner.address);
-      const expectedOnwerTbondBalanceAfterStake = ethToFloat(ownerTbondBalanceBeforeStake) + ethToFloat(investorDepositTonBalance) * 0.003;
-      expect(ethToFloat(onwerTbondBalanceAfterStake)).to.equal(expectedOnwerTbondBalanceAfterStake);
+      const expectedOnwerTbondBalanceAfterStake = utils.ethToFloat(ownerTbondBalanceBeforeStake) + utils.ethToFloat(investorDepositTonBalance) * 0.003;
+      expect(utils.ethToFloat(onwerTbondBalanceAfterStake)).to.equal(expectedOnwerTbondBalanceAfterStake);
   });
 
   it("6. unstake TON from Tokamak Network", async function () {
@@ -108,7 +111,7 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
       const investorTbondBalance = await fundManager.balanceOf(investor.address);
       await fundManager.connect(investor).claim(investorTbondBalance);
       const investorTonBalanceAfterClaim = await ton.balanceOf(investor.address);
-      expect(ethToFloat(investorTonBalanceAfterClaim)).to.above(ethToFloat(investorTonBalance));
+      expect(utils.ethToFloat(investorTonBalanceAfterClaim)).to.above(utils.ethToFloat(investorTonBalance));
   });
 
   it("9. check owners's balance after withdraw", async function () {
@@ -116,72 +119,6 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
       const onwerTbondBalance = await fundManager.balanceOf(owner.address);
       await fundManager.connect(owner).claim(onwerTbondBalance);
       const onwerTonBalanceAfterClaim = await ton.balanceOf(owner.address);
-      expect(ethToFloat(onwerTonBalanceAfterClaim)).to.above(ethToFloat(ownerTonBalance));
+      expect(utils.ethToFloat(onwerTonBalanceAfterClaim)).to.above(utils.ethToFloat(ownerTonBalance));
   });
-
-  // Uniswap V3를 통해 amount만큼의 ether를 TON으로 교환
-  async function getTon(account, amount) {
-    const WETH9 = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';		          // WETH9
-    const WTON = '0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2';		          // WTON
-    const SWAPROUTER = '0xE592427A0AEce92De3Edee1F18E0157C05861564';		    // Uniswap V3 SwapRouter
-
-    const weth = await ethers.getContractAt(
-      WethJson.abi,
-      WETH9
-    );
-
-    // swap ETH -> WETH
-    await weth.connect(account).deposit(overrides={value: ethers.utils.parseEther(amount)});
-    let balance = await weth.balanceOf(account.address);
-    expect(ethToFloat(balance)).to.equal(parseFloat(amount));
-
-    await weth.connect(account).approve(SWAPROUTER, balance);
-
-    // swap WETH -> WTON
-    const swapRouter = await ethers.getContractAt(
-      SwapRouterJson.abi,
-      SWAPROUTER
-    );
-
-    const expiryDate = Math.floor(Date.now() / 1000) + 1200;
-    const params = {
-      tokenIn: WETH9,
-      tokenOut: WTON,
-      fee: 3000,
-      recipient: account.address,
-      deadline: expiryDate,
-      amountIn: balance,
-      amountOutMinimum: 0,
-      sqrtPriceLimitX96: 0,
-    };
-    await swapRouter.connect(account).exactInputSingle(params);
-
-    const wton = await ethers.getContractAt(
-      "IWTON",
-      WTON
-    );
-    const wtonBalance = await wton.balanceOf(account.address);
-    expect(parseInt(ethers.utils.formatUnits(wtonBalance, 27))).to.above(0);
-
-    // swap WTON -> TON
-    await wton.connect(account).swapToTON(wtonBalance);
-
-    const ton = await ethers.getContractAt(
-      "IERC20",
-      TON
-    );
-    
-    let tonBalance = await ton.balanceOf(account.address);
-    expect(
-      parseFloat(ethers.utils.formatUnits(tonBalance, 18))
-    ).to.equal(
-      parseFloat(ethers.utils.formatUnits(wtonBalance, 27))
-    );
-
-    return tonBalance;
-  }
-  function ethToFloat(eth)
-  {
-    return parseFloat(ethers.utils.formatEther(eth));
-  }
-  });
+});
