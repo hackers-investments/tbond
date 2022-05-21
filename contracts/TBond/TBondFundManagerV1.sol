@@ -138,8 +138,8 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
      * @dev 컨트랙트 동작에 필요한 변수들 초기화하고, 관리자 지갑에서 minimumAmount만큼의 TON 토큰 출금
      * @param _layer2Operator              펀드에 모인 자금을 staking할 오퍼레이터의 컨트랙트 주소
      * @param _fundraisingPeriod           펀드 모금 기간(블록 개수)
-     * @param _minTONAmount                staking을 시작할 수 있는 최소한의 TON 수량, 펀딩 기간 중에 TON 수량이 확보되지 않으면 claim() method를 통해 반환됨.
      * @param _stakingPeriod               staking 기간(블록 개수)
+     * @param _minTONAmount                staking을 시작할 수 있는 최소한의 TON 수량, 펀딩 기간 중에 TON 수량이 확보되지 않으면 claim() method를 통해 반환됨.
      *
      * Requirements:
      *
@@ -149,14 +149,14 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
     function setup(
         address _layer2Operator,
         uint256 _fundraisingPeriod,
-        uint256 _minTONAmount,
-        uint256 _stakingPeriod
+        uint256 _stakingPeriod,
+        uint256 _minTONAmount
     )
         onlyRole(MANAGER_ROLE)
         nonZeroAddress(_layer2Operator)
         nonZero(_fundraisingPeriod)
-        nonZero(_minTONAmount)
         nonZero(_stakingPeriod)
+        nonZero(_minTONAmount)
         external
     {
         require(fundStatus == FundingStatus.NONE, "FundManagerV1:only be called in NONE");
@@ -200,6 +200,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
      */
     function stake() external {
         require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
+        require(block.number >= fundraisingEndBlockNumber);
 
         uint balance = ITON(ton).balanceOf(address(this));
         require(balance >= minTONAmount, "FundManagerV1:not enough TON");
