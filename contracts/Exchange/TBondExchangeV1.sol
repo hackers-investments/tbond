@@ -22,10 +22,13 @@ contract TBondExchangeV1 is Ownable, EIP712 {
     address ton;
 
     bytes internal personalSignPrefix = "\x19Ethereum Signed Message:\n";
+
+    /* 구조체가 변경될 경우 front-end의 코드도 함께 변경해야함 */
     bytes32 constant ORDER_TYPEHASH = keccak256(
         "Order(address owner,bytes32 key,utin256 amountSellToken,uint256 amountBuyToken,uint256 nonce)"
     );
 
+    /* 구조체가 변경될 경우 front-end의 코드도 함께 변경해야함 */
     struct Order {
         /* 주문을 생성한 사용자의 주소 */
         address owner;
@@ -40,6 +43,7 @@ contract TBondExchangeV1 is Ownable, EIP712 {
     }
 
     constructor(address _factory, address _ton) {
+        /* 구조체가 변경될 경우 front-end의 코드도 함께 변경해야함 */
         DOMAIN_SEPARATOR = hash(EIP712Domain({
             name              : name,
             version           : version,
@@ -81,7 +85,7 @@ contract TBondExchangeV1 is Ownable, EIP712 {
     }
 
     /** 
-     * @dev 주문 데이터와 sign의 일치 여부 검증
+     * @dev 주문 데이터가 owner가 생성한게 맞는지 EIP712 sign을 통해 검증
      * @param _hash Order(주문 데이터)를 hashOrder()로 해시한 값
      * @param owner 주문 데이터를 생성한 사용자의 주소(주문 데이터에 포함되어 있음)
      * @param signature 매수자가 보낸 매도자 / 매수자의 주문 데이터를 sign 한 값
@@ -93,10 +97,8 @@ contract TBondExchangeV1 is Ownable, EIP712 {
     {
         /* Calculate hash which must be signed. */
         bytes32 calculatedHashToSign = hashToSign(_hash);
-
         /* (d): Account-only authentication: ECDSA-signed by owner. */
         (uint8 v, bytes32 r, bytes32 s) = abi.decode(signature, (uint8, bytes32, bytes32));
-
         /* (a): sent by owner */
         if (owner == msg.sender) {
             return true;
