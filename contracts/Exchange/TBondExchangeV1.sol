@@ -25,7 +25,7 @@ contract TBondExchangeV1 is Ownable, EIP712 {
 
     /* 구조체가 변경될 경우 front-end의 코드도 함께 변경해야함 */
     bytes32 constant ORDER_TYPEHASH = keccak256(
-        "Order(address owner,bytes32 key,utin256 amountSellToken,uint256 amountBuyToken,uint256 nonce)"
+        "Order(address owner,bytes32 key,uint256 amountSellToken,uint256 amountBuyToken,uint256 nonce)"
     );
 
     /* 구조체가 변경될 경우 front-end의 코드도 함께 변경해야함 */
