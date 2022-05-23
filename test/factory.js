@@ -6,7 +6,7 @@ use(solidity);
 
 const TOKAMAK_REGISTRY = "0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367";
 
-describe("Tests for TBondFactoryV1", () => {
+describe("Tests for TBondFactoryV1's default operations", () => {
     let owner1;
     let owner2;
     let factory;

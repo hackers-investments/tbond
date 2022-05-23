@@ -1,6 +1,6 @@
 const { ethers } = require("hardhat");
 
-describe("Tests for TBondExchangeV1", function () {
+describe("Tests for TBondExchangeV1's default operations", function () {
   const TON = "0x2be5e8c109e2197D077D13A82dAead6a9b3433C5";
 
   it("1. deploy TBondExchangeV1 contract", async function () {

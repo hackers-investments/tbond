@@ -9,7 +9,7 @@ const SwapRouterJson = require("./SwapRouter.json");
 
 use(solidity);
 
-describe("Tests for TBondFundManagerV1", function () {
+describe("Tests for TBondFundManagerV1's misc operations", function () {
   let owner;
   let other;
   let factory;
@@ -49,45 +49,5 @@ describe("Tests for TBondFundManagerV1", function () {
 
   it("4. check if setIncentiveTo() fails on other's account", async function () {
     await expect(fundManager.connect(other).setIncentiveTo(other)).to.be.reverted;
-  });
-
-  it("5. check if setup() succeeds on owner's account with minimumDeposit TON", async function () {
-    const minimumDeposit = await fundManager.minimumDeposit();
-
-    await utils.getTon(owner, '20');
-
-    const ton = await ethers.getContractAt("IERC20", addresses.tokamak.tokens.TON);
-    await ton.approve(fundManager.address, minimumDeposit);
-
-    await fundManager.setup(addresses.tokamak.layer2.level19, 1000, 1000, ethers.utils.parseEther('1000'));
-  });
-
-  it("6. check if setup() fails on owner's account without minimumDeposit TON", async function () {
-    await expect(fundManager.setup(addresses.tokamak.layer2.level19, 1000, 1000, ethers.utils.parseEther('1000'))).to.be.reverted;
-  });
-
-  it("7. check if setup() succeeds on other's account with minimumDeposit TON", async function () {
-    const minimumDeposit = await fundManager.minimumDeposit();
-
-    await utils.getTon(other, '20');
-
-    const ton = await ethers.getContractAt("IERC20", addresses.tokamak.tokens.TON);
-    await ton.connect(other).approve(fundManager.address, minimumDeposit);
-
-    await expect(
-      fundManager.connect(other).setup(
-        addresses.tokamak.layer2.level19,
-        1000, 1000, ethers.utils.parseEther('1000')
-      )
-    ).to.be.reverted;
-  });
-
-  it("8. check if setup() fails on other's account without minimumDeposit TON", async function () {
-    await expect(
-      fundManager.connect(other).setup(
-        addresses.tokamak.layer2.level19,
-        1000, 1000, ethers.utils.parseEther('1000')
-      )
-    ).to.be.reverted;
   });
 });
