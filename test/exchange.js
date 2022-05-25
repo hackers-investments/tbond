@@ -1,3 +1,4 @@
+const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const addresses = require("./addresses.json");
 const utils = require("./utils");
@@ -136,5 +137,49 @@ describe("Tests for TBondExchangeV1's default operations", function () {
 
     const balance = await fundManager.balanceOf(taker.address);
     await expect(balance).to.equal(1000);
+  });
+
+  it("7. trade(reuse maker's sign)", async function () {
+    const abiCoder = new ethers.utils.AbiCoder();
+
+    // 판매할 TOND를 TBondExchangeV1 컨트랙트에 approve
+    fundManager.connect(maker).approve(exchange.address, 1000);
+
+    // 매수에 사용할 WTON을 TBondExchangeV1 컨트랙트에 approve
+    wton.connect(taker).approve(exchange.address, 1000);
+
+    await expect(exchange.connect(taker).executeOrder(
+      makerOrder, takerOrder,
+      abiCoder.encode(['bytes', 'bytes'], [makerSign, takerSign])
+    )).to.be.revertedWith("TBondExchnageV1:invalid maker's nonce");
+  });
+
+  it("8. generate Maker's sign with new nonce", async function () {
+    makerOrder = {
+      owner: maker.address,
+      key: key,
+      amountSellToken: 1000,
+      amountBuyToken: 1000,
+      nonce: (await exchange.nonces(maker.address)).toNumber()
+    };
+
+    signature = await maker._signTypedData(domain, types, makerOrder);
+    const sig = parseSig(signature);  
+    makerSign = abiCoder.encode(['uint8', 'bytes32', 'bytes32'], [sig.v, sig.r, sig.s]);
+  });
+
+  it("9. trade(reuse Taker's sign)", async function () {
+    const abiCoder = new ethers.utils.AbiCoder();
+
+    // 판매할 TOND를 TBondExchangeV1 컨트랙트에 approve
+    fundManager.connect(maker).approve(exchange.address, 1000);
+
+    // 매수에 사용할 WTON을 TBondExchangeV1 컨트랙트에 approve
+    wton.connect(taker).approve(exchange.address, 1000);
+
+    await expect(exchange.connect(taker).executeOrder(
+      makerOrder, takerOrder,
+      abiCoder.encode(['bytes', 'bytes'], [makerSign, takerSign])
+    )).to.be.revertedWith("TBondExchnageV1:invalid taker's nonce");
   });
 });
