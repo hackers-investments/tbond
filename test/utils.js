@@ -59,3 +59,43 @@ module.exports.getTon = async (account, amount) => {
 
   return tonBalance;
 }
+
+module.exports.getWTON = async (account, amount) => {
+  const weth = await ethers.getContractAt(
+    WethJson.abi,
+    addresses.tokens.WETH
+  );
+
+  // swap ETH -> WETH
+  await weth.connect(account).deposit(overrides={value: ethers.utils.parseEther(amount)});
+  let balance = await weth.balanceOf(account.address);
+
+  await weth.connect(account).approve(addresses.uniswap.SwapRouter, balance);
+
+  // swap WETH -> WTON
+  const swapRouter = await ethers.getContractAt(
+    SwapRouterJson.abi,
+    addresses.uniswap.SwapRouter
+  );
+
+  const expiryDate = Math.floor(Date.now() / 1000) + 1200;
+  const params = {
+    tokenIn: addresses.tokens.WETH,
+    tokenOut: addresses.tokamak.tokens.WTON,
+    fee: 3000,
+    recipient: account.address,
+    deadline: expiryDate,
+    amountIn: balance,
+    amountOutMinimum: 0,
+    sqrtPriceLimitX96: 0,
+  };
+  await swapRouter.connect(account).exactInputSingle(params);
+
+  const wton = await ethers.getContractAt(
+    "IWTON",
+    addresses.tokamak.tokens.WTON
+  );
+  const wtonBalance = await wton.balanceOf(account.address);
+
+  return wtonBalance;
+}
