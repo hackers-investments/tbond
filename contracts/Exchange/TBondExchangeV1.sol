@@ -19,7 +19,8 @@ contract TBondExchangeV1 is Ownable, EIP712 {
 
     /* TBOND 토큰 주소를 보관하고 있는 factory 컨트랙트 주소 */
     address factory;
-    address ton;
+    /* TON 토큰은 approve를 해도 transferFrom으로 전송할 수 없기 때문에 WTON 토큰 사용 */
+    address wton;
 
     bytes internal personalSignPrefix = "\x19Ethereum Signed Message:\n";
 
@@ -134,19 +135,18 @@ contract TBondExchangeV1 is Ownable, EIP712 {
         address token = ITBondFactoryV1(factory).tokens(makerOrder.key);
         require(token != address(0));
 
-        require(makerOrder.key == takerOrder.key);
-        require(makerOrder.amountSellToken == takerOrder.amountSellToken);
-        require(makerOrder.amountBuyToken == takerOrder.amountBuyToken);
+        require(makerOrder.key == takerOrder.key, "TBondExchnageV1:invalid TBOND key");
+        require(makerOrder.amountSellToken == takerOrder.amountSellToken, "TBondExchnageV1:invalid maker's amount");
+        require(makerOrder.amountBuyToken == takerOrder.amountBuyToken, "TBondExchnageV1:invalid taker's nonce");
+        require(makerOrder.nonce == nonces[makerOrder.owner], "TBondExchnageV1:invalid maker's nonce");
+        require(takerOrder.nonce == nonces[takerOrder.owner], "TBondExchnageV1:invalid taker's nonce");
 
         // maker와 taker의 sign으로 Order가 유효한지 검증
         require(validateOrderAuthorization(makerOrderHash, makerOrder.owner, makerSignature));
         require(validateOrderAuthorization(takerOrderHash, takerOrder.owner, takerSignature));
 
-        require(makerOrder.nonce == nonces[makerOrder.owner]);
-        require(takerOrder.nonce == nonces[takerOrder.owner]);
-
         IERC20(token).safeTransferFrom(makerOrder.owner, takerOrder.owner, makerOrder.amountSellToken);
-        IERC20(ton).safeTransferFrom(takerOrder.owner, makerOrder.owner, takerOrder.amountBuyToken);
+        IERC20(wton).safeTransferFrom(takerOrder.owner, makerOrder.owner, takerOrder.amountBuyToken);
 
         // 거래가 성공한 경우 sign을 재사용할 수 없도록 nonce 값 업데이트
         unchecked {
