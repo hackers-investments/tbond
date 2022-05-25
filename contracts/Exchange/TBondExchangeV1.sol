@@ -43,7 +43,7 @@ contract TBondExchangeV1 is Ownable, EIP712 {
         uint256 nonce;
     }
 
-    constructor(address _factory, address _ton) {
+    constructor(address _factory, address _wton) {
         /* 구조체가 변경될 경우 front-end의 코드도 함께 변경해야함 */
         DOMAIN_SEPARATOR = hash(EIP712Domain({
             name              : name,
@@ -53,7 +53,7 @@ contract TBondExchangeV1 is Ownable, EIP712 {
         }));
 
         factory = _factory;
-        ton = _ton;
+        wton = _wton;
     }
 
     function hashToSign(bytes32 orderHash)
