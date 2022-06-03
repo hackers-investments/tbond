@@ -180,13 +180,53 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
      *
      * - despoit() method 호출 전에 amount만큼의 TON 토큰을 컨트랙트에 approve 해줘야함
      */
-    function deposit(uint256 amount) nonZero(amount) external {
+    function depositTON(uint256 amount) nonZero(amount) external {
         require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
 
         IERC20(ton).safeTransferFrom(_msgSender(), address(this), amount);
 
         // 채권 토큰(TBOND-...) mint
         _mint(_msgSender(), amount);
+    }
+
+    /**
+     * @dev 사용자 지갑에서 amount만큼 WTON 토큰을 출금하고 TBOND 토큰 발행
+     * @param amount WTON 토큰 수량
+     *
+     * Requirements:
+     *
+     * - despoit() method 호출 전에 amount만큼의 WTON 토큰을 컨트랙트에 approve 해줘야함
+     */
+    function depositWTON(uint256 amount) nonZero(amount) external {
+        require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
+
+        IERC20(wton).safeTransferFrom(_msgSender(), address(this), amount);
+
+        // 채권 토큰(TBOND-...) mint
+        _mint(_msgSender(), _toWAD(amount));
+    }
+
+     /**
+     * @dev 사용자 지갑에서 amount만큼 WTON 토큰을 출금하고 TBOND 토큰 발행
+     * @param amountTon TON 토큰 수량
+     * @param amountWton WTON 토큰 수량
+     *
+     * Requirements:
+     *
+     * - despoit() method 호출 전에 amount만큼의 WTON 토큰을 컨트랙트에 approve 해줘야함
+     */
+    function depositBoth(uint256 amountTon, uint256 amountWton)
+        nonZero(amountTon)
+        nonZero(amountWton)
+        external
+    {
+        require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
+
+        IERC20(ton).safeTransferFrom(_msgSender(), address(this), amountTon);
+        IERC20(wton).safeTransferFrom(_msgSender(), address(this), amountWton);
+
+        // 채권 토큰(TBOND-...) mint
+        _mint(_msgSender(), amountTon + _toWAD(amountWton));
     }
 
     /**
@@ -202,8 +242,15 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
         require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
         require(block.number >= fundraisingEndBlockNumber);
 
-        uint balance = ITON(ton).balanceOf(address(this));
-        require(balance >= minTONAmount, "FundManagerV1:not enough TON");
+        uint wtonBalance = IERC20(wton).balanceOf(address(this));
+        uint tonBalance = IERC20(ton).balanceOf(address(this));
+        uint totalBalance = _toWAD(wtonBalance) + tonBalance;
+
+        require(totalBalance >= minTONAmount, "FundManagerV1:not enough tokens to stake");
+
+        if (wtonBalance != 0) {
+            IWTON(wton).swapToTON(wtonBalance);
+        }
 
         fundStatus = FundingStatus.STAKING;
 
@@ -212,7 +259,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
                 
         // 인센티브 TBOND 할당
         if (incentiveTo != address(0))
-            giveIncentive(balance - minimumDeposit);
+            giveIncentive(totalBalance - minimumDeposit);
 
         issuedTbondAmount = totalSupply();
 
@@ -221,7 +268,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
         /// 2) DepositManager(plasma-evm-contracts/contracts/stake/managers/DepositManager.sol)의 onApprove method를 통해 staking
         bytes memory data = abi.encode(depositManager, layer2Operator);
         require(
-            ITON(ton).approveAndCall(wton, balance, data),
+            ITON(ton).approveAndCall(wton, totalBalance, data),
             "FundManagerV1:approveAndCall fail"
         );
     }
@@ -272,7 +319,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
 
         require(IDepositManager(depositManager).processRequest(layer2Operator, true), "FundManagerV1: processRequest");
 
-        claimedTONAmount = ITON(ton).balanceOf(address(this));
+        claimedTONAmount = IERC20(ton).balanceOf(address(this));
     }
 
     /**
@@ -297,5 +344,12 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
         _burn(_msgSender(), amount);
 
         IERC20(ton).safeTransfer(_msgSender(), withdrawAmount);
+    }
+
+    /**
+     * @dev transform RAY to WAD
+     */
+    function _toWAD(uint256 v) internal pure returns (uint256) {
+        return v / 10 ** 9;
     }
 }

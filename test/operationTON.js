@@ -76,7 +76,7 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
       // investor account에서 FundManager에 deposit한 TON만큼 TBOND를 수령하는지 확인
       investorDepositTonBalance = ethers.utils.parseEther('1000');
       await ton.connect(investor).approve(fundManager.address, investorDepositTonBalance);
-      await fundManager.connect(investor).deposit(investorDepositTonBalance);
+      await fundManager.connect(investor).depositTON(investorDepositTonBalance);
       const investorTbondBalance = await fundManager.balanceOf(investor.address);
       expect(utils.ethToFloat(investorTbondBalance)).to.equal(utils.ethToFloat(investorDepositTonBalance));
 
@@ -111,6 +111,8 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
       const investorTbondBalance = await fundManager.balanceOf(investor.address);
       await fundManager.connect(investor).claim(investorTbondBalance);
       const investorTonBalanceAfterClaim = await ton.balanceOf(investor.address);
+      console.log(investorTonBalance);
+      console.log(investorTonBalanceAfterClaim);
       expect(utils.ethToFloat(investorTonBalanceAfterClaim)).to.above(utils.ethToFloat(investorTonBalance));
   });
 
