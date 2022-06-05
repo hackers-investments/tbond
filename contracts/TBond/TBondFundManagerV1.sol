@@ -348,7 +348,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
             "FundManagerV1:only be called in END or FUNDRAISING was failed");
 
         _burn(_msgSender(), amount);
-s
+
         IERC20(ton).safeTransfer(_msgSender(), wmul(amount, exchangeRate));
     }
 
