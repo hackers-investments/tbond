@@ -11,6 +11,9 @@ import {ITON} from "../interfaces/ITON.sol";
 import {IWTON} from "../interfaces/IWTON.sol";
 import {ICandidate} from "../interfaces/ICandidate.sol";
 import {IDepositManager} from "../interfaces/IDepositManager.sol";
+import {DSMath} from "../libs/DSMath.sol";
+
+import "hardhat/console.sol";
 
 interface ITokamakRegistry {
     function getTokamak()
@@ -26,7 +29,7 @@ interface ITokamakRegistry {
 }
 
 /// @dev [TODO] ERC20PresetMinterPauser 코드에서 필요없는 코드를 제거하고, 우리 필요한 기능만 넣어서 최적화하는 작업 필요
-contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
+contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
     using SafeERC20 for IERC20;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
@@ -35,6 +38,8 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
     address public wton;
     address public depositManager;
     address public stakeRegistry;
+
+    uint256 internal exchangeRate;
 
     enum FundingStatus {
         NONE,
@@ -45,6 +50,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
     }
 
     FundingStatus fundStatus;
+
     address public layer2Operator;
     uint256 public stakingPeriod;
     uint256 public minTONAmount;
@@ -320,6 +326,8 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
         require(IDepositManager(depositManager).processRequest(layer2Operator, true), "FundManagerV1: processRequest");
 
         claimedTONAmount = IERC20(ton).balanceOf(address(this));
+
+        exchangeRate = wdiv(claimedTONAmount, issuedTbondAmount);
     }
 
     /**
@@ -339,11 +347,9 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser {
                     block.number > fundraisingEndBlockNumber),
             "FundManagerV1:only be called in END or FUNDRAISING was failed");
 
-        uint256 withdrawAmount = claimedTONAmount * amount / issuedTbondAmount;
-
         _burn(_msgSender(), amount);
-
-        IERC20(ton).safeTransfer(_msgSender(), withdrawAmount);
+s
+        IERC20(ton).safeTransfer(_msgSender(), wmul(amount, exchangeRate));
     }
 
     /**
