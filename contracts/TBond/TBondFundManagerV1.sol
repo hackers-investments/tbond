@@ -13,8 +13,6 @@ import {ICandidate} from "../interfaces/ICandidate.sol";
 import {IDepositManager} from "../interfaces/IDepositManager.sol";
 import {DSMath} from "../libs/DSMath.sol";
 
-import "hardhat/console.sol";
-
 interface ITokamakRegistry {
     function getTokamak()
         external
@@ -327,7 +325,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
 
         claimedTONAmount = IERC20(ton).balanceOf(address(this));
 
-        exchangeRate = wdiv(claimedTONAmount, issuedTbondAmount);
+        exchangeRate = wdiv2(claimedTONAmount, issuedTbondAmount);
     }
 
     /**
@@ -349,7 +347,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
 
         _burn(_msgSender(), amount);
 
-        IERC20(ton).safeTransfer(_msgSender(), wmul(amount, exchangeRate));
+        IERC20(ton).safeTransfer(_msgSender(), wmul2(amount, exchangeRate));
     }
 
     /**
