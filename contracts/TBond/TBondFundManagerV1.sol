@@ -26,7 +26,10 @@ interface ITokamakRegistry {
         );
 }
 
+/// @title TON/WTON 토큰을 모아서 스테이킹하고 리워드를 분배하는 컨트랙트
+/// @author Jeongun Baek (blackcow@hackersinvestments.com)
 /// @dev [TODO] ERC20PresetMinterPauser 코드에서 필요없는 코드를 제거하고, 우리 필요한 기능만 넣어서 최적화하는 작업 필요
+/// @dev [TODO] stake, unstake, withdraw method 등 Tokamak Network와 관련된 기능들을 분리하는 작업이 필요한지 검토
 contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
     using SafeERC20 for IERC20;
 
@@ -37,7 +40,8 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
     address public depositManager;
     address public stakeRegistry;
 
-    uint256 internal exchangeRate;
+    /// @dev withdraw() method에서 staking 후 돌려받은 TON에 따라 교환 비율이 변경됨
+    uint256 internal exchangeRate = 1;
 
     enum FundingStatus {
         NONE,
@@ -207,6 +211,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
         IERC20(wton).safeTransferFrom(_msgSender(), address(this), amount);
 
         // 채권 토큰(TBOND-...) mint
+        // WTON은 RAY(1e27) decimal를 사용하기 때문에 WAD(1e18)로 변환해서 TBOND 발행
         _mint(_msgSender(), _toWAD(amount));
     }
 
@@ -230,6 +235,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
         IERC20(wton).safeTransferFrom(_msgSender(), address(this), amountWton);
 
         // 채권 토큰(TBOND-...) mint
+        // WTON은 RAY(1e27) decimal를 사용하기 때문에 WAD(1e18)로 변환해서 TBOND 발행
         _mint(_msgSender(), amountTon + _toWAD(amountWton));
     }
 
@@ -333,18 +339,24 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
      *
      * Requirements:
      * 
-     * - 펀드 모집에 실패 또는 펀드 종료(withdraw) 이후 호출 가능
+     * - gas 소모를 줄이기 위해 상태를 확인하는 코드를 제거
+     * - 컨트랙트에 쌓인 TON 토큰의 balance가 0일 때는 claim에 실패하기 때문에 호출 전에 balance 확인 필수
      * 
      * @param amount TBOND 토큰 수량
      */  
     function claim(uint256 amount) nonZero(amount) external {
-        FundingStatus _fundStatus = fundStatus;
-        require(
-            _fundStatus == FundingStatus.END ||
-                (_fundStatus == FundingStatus.FUNDRAISING &&
-                    block.number > fundraisingEndBlockNumber),
-            "FundManagerV1:only be called in END or FUNDRAISING was failed");
+        // deposit된 TON/WTON을 스테이킹하기 전에는 exchangeRate가 1로 설정되어 있기 때문에 언제든지 환불 가능
+        // TON/WTON이 staking되면 컨트랙트의 balance가 0이기 때문에 트랜잭션이 실패함
+        // FundingStatus와 fundraisingEndBlockNumber에 접근하지 않으면 소모되는 gas가 약 6%정도 감소함
 
+        // FundingStatus _fundStatus = fundStatus;
+        // require(
+        //     _fundStatus == FundingStatus.END ||
+        //         (_fundStatus == FundingStatus.FUNDRAISING &&
+        //             block.number > fundraisingEndBlockNumber),
+        //     "FundManagerV1:only be called in END or FUNDRAISING was failed");
+
+        // burnFrom() method를 사용하면 allowance를 처리하는 과정에서 많은 gas가 소모되기 때문에 _burn() method 사용
         _burn(_msgSender(), amount);
 
         IERC20(ton).safeTransfer(_msgSender(), wmul2(amount, exchangeRate));
