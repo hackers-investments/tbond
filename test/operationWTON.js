@@ -117,6 +117,9 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
       await fundManager.connect(investor).claim(investorTbondBalance);
       const investorTonBalanceAfterClaim = await ton.balanceOf(investor.address);
       expect(utils.ethToFloat(investorTonBalanceAfterClaim)).to.above(utils.ethToFloat(investorDepositWtonBalance.div(10 ** 9)));
+
+      // claim() method 호출 후 TBOND balance가 0으로 변경되었는지 확인
+      expect(await fundManager.balanceOf(investor.address)).to.equal(0);
   });
 
   it("9. check owners's balance after withdraw", async function () {
@@ -125,5 +128,8 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
       await fundManager.connect(owner).claim(onwerTbondBalance);
       const onwerTonBalanceAfterClaim = await ton.balanceOf(owner.address);
       expect(utils.ethToFloat(onwerTonBalanceAfterClaim)).to.above(utils.ethToFloat(ownerTonBalance));
+
+      // claim() method 호출 후 TBOND balance가 0으로 변경되었는지 확인
+      expect(await fundManager.balanceOf(owner.address)).to.equal(0);
   });
 });
