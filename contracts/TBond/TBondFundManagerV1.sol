@@ -368,4 +368,19 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
     function _toWAD(uint256 v) internal pure returns (uint256) {
         return v / 10 ** 9;
     }
+
+    /**
+     * @dev 오입금된 ERC20 토큰을 반환할 때 사용
+     * @param token 오입금된 ERC20 토큰 주소
+     * @param to 오입금된 ERC20 토큰을 돌려받을 주소
+     * @param amount 전송할 ERC20 토큰의 양
+     * @notice 관리자가 악용하는 것을 방지하기 위해 TON / WTON 전송은 제한됨
+     */
+    function emergencyRecoveryTransfer(address token, address to, uint256 amount)
+        external
+        onlyRole(MANAGER_ROLE)
+    {
+        require(token != ton && token != wton);
+        IERC20(token).safeTransfer(to, amount);
+    }
 }
