@@ -58,7 +58,7 @@ describe("Tests for TBondExchangeV1's default operations", function () {
   it("1. get TBOND token on maker's account", async function () {
     await utils.getTon(maker, '10');
     await ton.connect(maker).approve(fundManager.address, 1000);
-    await fundManager.connect(maker).deposit(1000);
+    await fundManager.connect(maker).depositTON(1000);
   });
 
   it("2. get TON token on taker's account", async function () {
