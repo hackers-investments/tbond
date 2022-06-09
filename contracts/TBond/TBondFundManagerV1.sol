@@ -91,6 +91,11 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
         grantRole(MANAGER_ROLE, _msgSender());
     }
 
+    modifier nonLayer2Candidate(address candidate) {
+        require(ICandidate(candidate).isLayer2Candidate() == false, "TBondFundRaiser: layer2");
+        _;
+    }
+
     modifier nonZero(uint256 _value) {
         require(_value > 0, "TBondFundRaiser: zero");
         _;
@@ -153,6 +158,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
      *
      * - setup() method를 호출하는 관리자는 minimumAmount만큼의 TON 토큰을 보유하고 있어야 하며,
      * minimumAmount만큼의 TON 토큰을 컨트랙트에 approve 해줘야함
+     * - _layer2Operator는 제3자가 커밋할 수 있는 Candidate만 가능하며, layer2Candidate는 등록할 수 없음.
      */
     function setup(
         address _layer2Operator,
@@ -162,6 +168,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
     )
         onlyRole(MANAGER_ROLE)
         nonZeroAddress(_layer2Operator)
+        nonLayer2Candidate(_layer2Operator)
         nonZero(_fundraisingPeriod)
         nonZero(_stakingPeriod)
         nonZero(_minTONAmount)
