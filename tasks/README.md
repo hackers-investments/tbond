@@ -24,17 +24,17 @@ npx hardhat getTON --account [investorAddress] --amount 50 --network localhost
 Metamask에서 investor 계정을 import하고, TBOND-frontend에서 TON deposit
 
 ## 06. stake() method 실행
-npx hardhat hardhat_mine --blocks 0x64
+npx hardhat hardhat_mine --blocks 0x64 --network localhost
 
 npx hardhat stake --account [adminAddress] --factory [factoryAddress] --network localhost
 
 ## 07. unstake() method 실행
-npx hardhat hardhat_mine --blocks 0x64
+npx hardhat hardhat_mine --blocks 0x64 --network localhost
 
 npx hardhat unstake --account [adminAddress] --factory [factoryAddress] --network localhost
 
 ## 08. withdraw() method 실행
-npx hardhat hardhat_mine --blocks 0x16b76
+npx hardhat hardhat_mine --blocks 0x16b76 --network localhost
 
 npx hardhat withdraw --account [adminAddress] --factory [factoryAddress] --network localhost
 
