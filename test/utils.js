@@ -9,6 +9,11 @@ const ethToFloat = (eth) => {
 }
 module.exports.ethToFloat = ethToFloat;
 
+const latestTimestamp = async () => {
+  const block = await ethers.provider.getBlock("latest");
+  return block.timestamp;
+}
+
 // Uniswap V3를 통해 amount만큼의 ether를 TON으로 교환
 module.exports.getTon = async (account, amount) => {
   const weth = await ethers.getContractAt(
@@ -28,7 +33,7 @@ module.exports.getTon = async (account, amount) => {
     addresses.uniswap.SwapRouter
   );
 
-  const expiryDate = Math.floor(Date.now() / 1000) + 1200;
+  const expiryDate = await latestTimestamp() + 1200;
   const params = {
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokamak.tokens.WTON,
@@ -78,7 +83,7 @@ module.exports.getWTON = async (account, amount) => {
     addresses.uniswap.SwapRouter
   );
 
-  const expiryDate = Math.floor(Date.now() / 1000) + 1200;
+  const expiryDate = await latestTimestamp() + 1200;
   const params = {
     tokenIn: addresses.tokens.WETH,
     tokenOut: addresses.tokamak.tokens.WTON,
