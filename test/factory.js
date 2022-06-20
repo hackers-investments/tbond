@@ -6,20 +6,20 @@ use(solidity);
 
 const TOKAMAK_REGISTRY = "0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367";
 
-describe("Tests for TBondFactoryV1's default operations", () => {
+describe("Tests for TBondFactory's default operations", () => {
     let owner1;
     let owner2;
     let factory;
 
     beforeEach(async function () {
-        const Factory = await ethers.getContractFactory("TBondFactoryV1");
+        const Factory = await ethers.getContractFactory("TBondFactory");
         factory = await Factory.deploy();
         await factory.deployed();
 
         [owner1, owner2] = await ethers.getSigners();
     });
 
-    it("1. create TBondFundManagerV1 from unprivileged account", async function () {
+    it("1. create TBondFundManager from unprivileged account", async function () {
         await expect(
             factory.connect(owner2).create(TOKAMAK_REGISTRY)
         ).to.be.revertedWith('Ownable: caller is not the owner');

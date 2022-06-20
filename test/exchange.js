@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const addresses = require("./addresses.json");
 const utils = require("./utils");
 
-describe("Tests for TBondExchangeV1's default operations", function () {
+describe("Tests for TBondExchange's default operations", function () {
   let key;
   let factory;
   let fundManager;
@@ -33,7 +33,7 @@ describe("Tests for TBondExchangeV1's default operations", function () {
     ton = await ethers.getContractAt('IERC20', addresses.tokamak.tokens.TON);
     wton = await ethers.getContractAt('IERC20', addresses.tokamak.tokens.WTON);
 
-    const Factory = await ethers.getContractFactory("TBondFactoryV1");
+    const Factory = await ethers.getContractFactory("TBondFactory");
     factory = await Factory.deploy();
     await factory.deployed();
     await factory.create(addresses.tokamak.network.StakeRegistry);
@@ -47,7 +47,7 @@ describe("Tests for TBondExchangeV1's default operations", function () {
     await utils.getTon(owner, '20');
     await ton.approve(fundManagerAddr, ethers.utils.parseEther('10000'));
 
-    fundManager = await ethers.getContractAt("TBondFundManagerV1", fundManagerAddr);
+    fundManager = await ethers.getContractAt("TBondFundManager", fundManagerAddr);
     await fundManager.setup(
       addresses.tokamak.layer2.level19,
       1000, 1000, ethers.utils.parseEther('1000')
@@ -64,13 +64,13 @@ describe("Tests for TBondExchangeV1's default operations", function () {
     await utils.getWTON(taker, '10');
   });
 
-  it("3. deploy TBondExchangeV1 contract", async function () {
-    const Exchange = await ethers.getContractFactory("TBondExchangeV1");
+  it("3. deploy TBondExchange contract", async function () {
+    const Exchange = await ethers.getContractFactory("TBondExchange");
     exchange = await Exchange.deploy(factory.address, addresses.tokamak.tokens.WTON);
     await exchange.deployed();
 
     // EIP712에 사용되는 domain 구조체
-    // TBondExhcnageV1 컨트랙트의 DOMAIN_SEPARATOR와 일치해야함
+    // TBondExhcnage 컨트랙트의 DOMAIN_SEPARATOR와 일치해야함
     domain = {
       name: 'TBOND Exchange',
       version: '1.0',
@@ -79,7 +79,7 @@ describe("Tests for TBondExchangeV1's default operations", function () {
     };
 
     // sign 할 데이터의 구조체
-    // TBondExchangeV1 컨트랙트의 ORDER_TYPEHASH와 일치해야함
+    // TBondExchange 컨트랙트의 ORDER_TYPEHASH와 일치해야함
     types = {
       Order: [
           { name: 'owner', type: 'address' },
@@ -123,10 +123,10 @@ describe("Tests for TBondExchangeV1's default operations", function () {
   it("6. trade", async function () {
     const abiCoder = new ethers.utils.AbiCoder();
 
-    // 판매할 TOND를 TBondExchangeV1 컨트랙트에 approve
+    // 판매할 TOND를 TBondExchange 컨트랙트에 approve
     fundManager.connect(maker).approve(exchange.address, 1000);
 
-    // 매수에 사용할 WTON을 TBondExchangeV1 컨트랙트에 approve
+    // 매수에 사용할 WTON을 TBondExchange 컨트랙트에 approve
     wton.connect(taker).approve(exchange.address, 1000);
 
     await exchange.connect(taker).executeOrder(
@@ -141,16 +141,16 @@ describe("Tests for TBondExchangeV1's default operations", function () {
   it("7. trade(reuse maker's sign)", async function () {
     const abiCoder = new ethers.utils.AbiCoder();
 
-    // 판매할 TOND를 TBondExchangeV1 컨트랙트에 approve
+    // 판매할 TOND를 TBondExchange 컨트랙트에 approve
     fundManager.connect(maker).approve(exchange.address, 1000);
 
-    // 매수에 사용할 WTON을 TBondExchangeV1 컨트랙트에 approve
+    // 매수에 사용할 WTON을 TBondExchange 컨트랙트에 approve
     wton.connect(taker).approve(exchange.address, 1000);
 
     await expect(exchange.connect(taker).executeOrder(
       makerOrder, takerOrder,
       abiCoder.encode(['bytes', 'bytes'], [makerSign, takerSign])
-    )).to.be.revertedWith("TBondExchnageV1:invalid maker's nonce");
+    )).to.be.revertedWith("TBondExchnage:invalid maker's nonce");
   });
 
   it("8. generate Maker's sign with new nonce", async function () {
@@ -170,15 +170,15 @@ describe("Tests for TBondExchangeV1's default operations", function () {
   it("9. trade(reuse Taker's sign)", async function () {
     const abiCoder = new ethers.utils.AbiCoder();
 
-    // 판매할 TOND를 TBondExchangeV1 컨트랙트에 approve
+    // 판매할 TOND를 TBondExchange 컨트랙트에 approve
     fundManager.connect(maker).approve(exchange.address, 1000);
 
-    // 매수에 사용할 WTON을 TBondExchangeV1 컨트랙트에 approve
+    // 매수에 사용할 WTON을 TBondExchange 컨트랙트에 approve
     wton.connect(taker).approve(exchange.address, 1000);
 
     await expect(exchange.connect(taker).executeOrder(
       makerOrder, takerOrder,
       abiCoder.encode(['bytes', 'bytes'], [makerSign, takerSign])
-    )).to.be.revertedWith("TBondExchnageV1:invalid taker's nonce");
+    )).to.be.revertedWith("TBondExchnage:invalid taker's nonce");
   });
 });

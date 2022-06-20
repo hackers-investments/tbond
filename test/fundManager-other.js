@@ -13,7 +13,7 @@ use(solidity);
  * @dev owner가 아닌 account로 stake(), unstake(), withdraw() method를
  * 정상적으로 사용할 수 있는 확인하는 테스트.
  */
-describe("Tests for TBondFundManagerV1 unstake() method on other's account", function () {
+describe("Tests for TBondFundManager unstake() method on other's account", function () {
   let owner;
   let other;
   
@@ -21,7 +21,7 @@ describe("Tests for TBondFundManagerV1 unstake() method on other's account", fun
 
   before(async () => {
     [owner, other] = await ethers.getSigners();
-    const Factory = await ethers.getContractFactory("TBondFactoryV1");
+    const Factory = await ethers.getContractFactory("TBondFactory");
     const factory = await Factory.deploy();
     await factory.deployed();
 
@@ -32,7 +32,7 @@ describe("Tests for TBondFundManagerV1 unstake() method on other's account", fun
     const k = ethers.utils.solidityKeccak256(["string"], [name]);
 
     const fundManagerAddress = await factory.tokens(k);
-    fundManager = await ethers.getContractAt("TBondFundManagerV1", fundManagerAddress);
+    fundManager = await ethers.getContractAt("TBondFundManager", fundManagerAddress);
   });
 
   it("1. setup()", async function () {

@@ -9,7 +9,7 @@ const SwapRouterJson = require("./SwapRouter.json");
 
 use(solidity);
 
-describe("Tests for TBondFundManagerV1's setup() method", function () {
+describe("Tests for TBondFundManager's setup() method", function () {
   let owner;
   let other;
   let factory;
@@ -21,7 +21,7 @@ describe("Tests for TBondFundManagerV1's setup() method", function () {
   });
 
   beforeEach(async () => {
-    const Factory = await ethers.getContractFactory("TBondFactoryV1");
+    const Factory = await ethers.getContractFactory("TBondFactory");
     factory = await Factory.deploy();
     await factory.deployed();
 
@@ -32,7 +32,7 @@ describe("Tests for TBondFundManagerV1's setup() method", function () {
     const k = ethers.utils.solidityKeccak256(["string"], [name]);
 
     const fundManagerAddress = await factory.tokens(k);
-    fundManager = await ethers.getContractAt("TBondFundManagerV1", fundManagerAddress);
+    fundManager = await ethers.getContractAt("TBondFundManager", fundManagerAddress);
   });
   
   it("1. check if setup() succeeds on owner's account with minimumDeposit TON", async function () {

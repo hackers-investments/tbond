@@ -88,7 +88,7 @@ task("deployTBOND", "Deploy TBOND contract")
   .setAction(async (taskArgs) => {
     const signer = await hre.ethers.getSigner(taskArgs.account);
     
-    const Factory = await hre.ethers.getContractFactory("TBondFactoryV1");
+    const Factory = await hre.ethers.getContractFactory("TBONDFactory");
     const FACTORY = await Factory.connect(signer).deploy();
     await FACTORY.deployed();
     console.log(`FACTORY : ${FACTORY.address}`);
@@ -110,7 +110,7 @@ task("deployTBOND", "Deploy TBOND contract")
       ethers.utils.parseEther("10000")
     );
 
-    const TBOND = await hre.ethers.getContractAt('TBondFundManagerV1', TBONDAddress);
+    const TBOND = await hre.ethers.getContractAt('TBondFundManager', TBONDAddress);
     await TBOND.connect(signer).setup(
       addresses.tokamak.layer2.level19,
       100,
@@ -118,59 +118,59 @@ task("deployTBOND", "Deploy TBOND contract")
       ethers.utils.parseEther("10000"));
   })
 
-task("getKey", "get key for TBondFundManagerV1")
+task("getKey", "get key for TBondFundManager")
   .addParam("account", "address of admin")
-  .addParam("factory", "address of TBONDFactoryV1 contract")
+  .addParam("factory", "address of TBONDFactory contract")
   .setAction(async (taskArgs) => {
     const signer = await hre.ethers.getSigner(taskArgs.account);
-    const FACTORY = await hre.ethers.getContractAt("TBondFactoryV1", taskArgs.factory);
+    const FACTORY = await hre.ethers.getContractAt("TBONDFactory", taskArgs.factory);
     const key = await FACTORY.getKey(signer.address, "TBOND", "TBOND");
     console.log(`KEY ${key}`);
   })
 
 task("stake", "staking TON")
   .addParam("account", "address of admin")
-  .addParam("factory", "address of TBONDFactoryV1 contract")
+  .addParam("factory", "address of TBONDFactory contract")
   .setAction(async (taskArgs) => {
     const signer = await hre.ethers.getSigner(taskArgs.account);
-    const FACTORY = await hre.ethers.getContractAt("TBondFactoryV1", taskArgs.factory);
+    const FACTORY = await hre.ethers.getContractAt("TBONDFactory", taskArgs.factory);
     const key = await FACTORY.getKey(signer.address, "TBOND", "TBOND");
     const TBONDAddress = await FACTORY.tokens(key);
-    const TBOND = await hre.ethers.getContractAt('TBondFundManagerV1', TBONDAddress);
+    const TBOND = await hre.ethers.getContractAt('TBondFundManager', TBONDAddress);
     await TBOND.connect(signer).stake(overrides={gasLimit: 10000000});
   })
 
 task("unstake", "unstaking TON")
   .addParam("account", "address of admin")
-  .addParam("factory", "address of TBONDFactoryV1 contract")
+  .addParam("factory", "address of TBONDFactory contract")
   .setAction(async (taskArgs) => {
     const signer = await hre.ethers.getSigner(taskArgs.account);
-    const FACTORY = await hre.ethers.getContractAt("TBondFactoryV1", taskArgs.factory);
+    const FACTORY = await hre.ethers.getContractAt("TBONDFactory", taskArgs.factory);
     const key = await FACTORY.getKey(signer.address, "TBOND", "TBOND");
     const TBONDAddress = await FACTORY.tokens(key);
-    const TBOND = await hre.ethers.getContractAt('TBondFundManagerV1', TBONDAddress);
+    const TBOND = await hre.ethers.getContractAt('TBondFundManager', TBONDAddress);
     await TBOND.connect(signer).unstake();
   })
 
 task("withdraw", "withdraw TON")
   .addParam("account", "address of admin")
-  .addParam("factory", "address of TBONDFactoryV1 contract")
+  .addParam("factory", "address of TBONDFactory contract")
   .setAction(async (taskArgs) => {
     const signer = await hre.ethers.getSigner(taskArgs.account);
-    const FACTORY = await hre.ethers.getContractAt("TBondFactoryV1", taskArgs.factory);
+    const FACTORY = await hre.ethers.getContractAt("TBONDFactory", taskArgs.factory);
     const key = await FACTORY.getKey(signer.address, "TBOND", "TBOND");
     const TBONDAddress = await FACTORY.tokens(key);
-    const TBOND = await hre.ethers.getContractAt('TBondFundManagerV1', TBONDAddress);
+    const TBOND = await hre.ethers.getContractAt('TBondFundManager', TBONDAddress);
     await TBOND.connect(signer).withdraw();
   })
 
 task("deployTBONDExchange", "Deploy TBOND Exchange contract")
   .addParam("account", "address of admin")
-  .addParam("factory", "address of TBONDFactoryV1 contract")
+  .addParam("factory", "address of TBONDFactory contract")
   .setAction(async (taskArgs) => {
     const signer = await hre.ethers.getSigner(taskArgs.account);
     
-    const Exchange = await hre.ethers.getContractFactory("TBondExchangeV1");
+    const Exchange = await hre.ethers.getContractFactory("TBondExchange");
     const EXCHANGE = await Exchange.connect(signer).deploy(
       taskArgs.factory, addresses.tokamak.tokens.WTON
     );

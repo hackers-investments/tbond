@@ -30,7 +30,7 @@ interface ITokamakRegistry {
 /// @author Jeongun Baek (blackcow@hackersinvestments.com)
 /// @dev [TODO] ERC20PresetMinterPauser 코드에서 필요없는 코드를 제거하고, 우리 필요한 기능만 넣어서 최적화하는 작업 필요
 /// @dev [TODO] stake, unstake, withdraw method 등 Tokamak Network와 관련된 기능들을 분리하는 작업이 필요한지 검토
-contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
+contract TBondFundManager is Ownable, ERC20PresetMinterPauser, DSMath {
     using SafeERC20 for IERC20;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
@@ -133,7 +133,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
             ton != address(0) &&
                 wton != address(0) &&
                 depositManager != address(0),
-            "FundManagerV1:tokamak network error"
+            "FundManager:tokamak network error"
         );
     }
     
@@ -175,7 +175,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
         nonZero(_minTONAmount)
         external
     {
-        require(fundStatus == FundingStatus.NONE, "FundManagerV1:only be called in NONE");
+        require(fundStatus == FundingStatus.NONE, "FundManager:only be called in NONE");
 
         // 관리자가 최수 수량(minimumAmount)을 deposit 해서 펀딩에 같이 참여하도록 설계
         IERC20(ton).safeTransferFrom(_msgSender(), address(this), minimumDeposit);
@@ -197,7 +197,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
      * - despoit() method 호출 전에 amount만큼의 TON 토큰을 컨트랙트에 approve 해줘야함
      */
     function depositTON(uint256 amount) nonZero(amount) external {
-        require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
+        require(fundStatus == FundingStatus.FUNDRAISING, "FundManager:only be called in FUNDRAISING");
 
         IERC20(ton).safeTransferFrom(_msgSender(), address(this), amount);
 
@@ -214,7 +214,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
      * - despoit() method 호출 전에 amount만큼의 WTON 토큰을 컨트랙트에 approve 해줘야함
      */
     function depositWTON(uint256 amount) nonZero(amount) external {
-        require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
+        require(fundStatus == FundingStatus.FUNDRAISING, "FundManager:only be called in FUNDRAISING");
 
         IERC20(wton).safeTransferFrom(_msgSender(), address(this), amount);
 
@@ -237,7 +237,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
         nonZero(amountWton)
         external
     {
-        require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
+        require(fundStatus == FundingStatus.FUNDRAISING, "FundManager:only be called in FUNDRAISING");
 
         IERC20(ton).safeTransferFrom(_msgSender(), address(this), amountTon);
         IERC20(wton).safeTransferFrom(_msgSender(), address(this), amountWton);
@@ -257,14 +257,14 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
      * NOTE: 펀딩된 TON 토큰 수량의 0.3%만큼의 TBOND를 추가 발행해서 인센티브로 지급
      */
     function stake() external {
-        require(fundStatus == FundingStatus.FUNDRAISING, "FundManagerV1:only be called in FUNDRAISING");
+        require(fundStatus == FundingStatus.FUNDRAISING, "FundManager:only be called in FUNDRAISING");
         require(block.number >= fundraisingEndBlockNumber);
 
         uint wtonBalance = IERC20(wton).balanceOf(address(this));
         uint tonBalance = IERC20(ton).balanceOf(address(this));
         uint totalBalance = _toWAD(wtonBalance) + tonBalance;
 
-        require(totalBalance >= minTONAmount, "FundManagerV1:not enough tokens to stake");
+        require(totalBalance >= minTONAmount, "FundManager:not enough tokens to stake");
 
         if (wtonBalance != 0) {
             IWTON(wton).swapToTON(wtonBalance);
@@ -287,7 +287,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
         bytes memory data = abi.encode(depositManager, layer2Operator);
         require(
             ITON(ton).approveAndCall(wton, totalBalance, data),
-            "FundManagerV1:approveAndCall fail"
+            "FundManager:approveAndCall fail"
         );
     }
 
@@ -299,18 +299,18 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
      * - staking 후 지정된 블록(stakingPeriod)이 지난 뒤 호출 가능
      */
     function unstake() external {
-        require(fundStatus == FundingStatus.STAKING, "FundManagerV1:only be called in STAKING");
-        require(stakingEndBlockNumber <= block.number, "FundManagerV1:funding is not end yet");
+        require(fundStatus == FundingStatus.STAKING, "FundManager:only be called in STAKING");
+        require(stakingEndBlockNumber <= block.number, "FundManager:funding is not end yet");
         
         address _layer2Operator = layer2Operator;
         address _depositManager = depositManager;
 
         // unstake를 하기 전에 commit하는 것을 통해 컨트랙트에 쌓인 시뇨리지 분배
-        require(ICandidate(_layer2Operator).updateSeigniorage(), "FundManagerV1: updateSeigniorage");
+        require(ICandidate(_layer2Operator).updateSeigniorage(), "FundManager: updateSeigniorage");
 
         fundStatus = FundingStatus.UNSTAKING;
 
-        require(IDepositManager(_depositManager).requestWithdrawalAll(_layer2Operator), "FundManagerV1: requestWithdrawalAll");
+        require(IDepositManager(_depositManager).requestWithdrawalAll(_layer2Operator), "FundManager: requestWithdrawalAll");
 
         // https://github.com/Onther-Tech/plasma-evm-contracts의 contracts/stake/managers/DepositManager.sol를 참고해서 withdrawDelay 계산
         // withdrawDelay가 변경되면 변경된 이후에 발생한 unstake부터 적용되므로 withdrawDelay 변경은 고려하지 않음
@@ -330,12 +330,12 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
      * - unstaking 후 지정된 블록(withdrawDelay)이 지난 뒤 호출 가능
      */
     function withdraw() external {
-        require(fundStatus == FundingStatus.UNSTAKING, "FundManagerV1:only be called in UNSTAKING");
-        require(withdrawBlockNumber <= block.number, "FundManagerV1:unstaking is not ended yet");
+        require(fundStatus == FundingStatus.UNSTAKING, "FundManager:only be called in UNSTAKING");
+        require(withdrawBlockNumber <= block.number, "FundManager:unstaking is not ended yet");
         
         fundStatus = FundingStatus.END;
 
-        require(IDepositManager(depositManager).processRequest(layer2Operator, true), "FundManagerV1: processRequest");
+        require(IDepositManager(depositManager).processRequest(layer2Operator, true), "FundManager: processRequest");
 
         claimedTONAmount = IERC20(ton).balanceOf(address(this));
 
@@ -362,7 +362,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
         //     _fundStatus == FundingStatus.END ||
         //         (_fundStatus == FundingStatus.FUNDRAISING &&
         //             block.number > fundraisingEndBlockNumber),
-        //     "FundManagerV1:only be called in END or FUNDRAISING was failed");
+        //     "FundManager:only be called in END or FUNDRAISING was failed");
 
         // burnFrom() method를 사용하면 allowance를 처리하는 과정에서 많은 gas가 소모되기 때문에 _burn() method 사용
         _burn(_msgSender(), amount);

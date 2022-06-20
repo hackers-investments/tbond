@@ -6,9 +6,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {EIP712} from "../libs/EIP712.sol";
-import {ITBondFactoryV1} from "../tbond/interfaces/ITBondFactoryV1.sol";
+import {ITBondFactory} from "../tbond/interfaces/ITBondFactory.sol";
 
-contract TBondExchangeV1 is Ownable, EIP712 {
+contract TBondExchange is Ownable, EIP712 {
     using SafeERC20 for IERC20;
 
     string public constant name = "TBOND Exchange";
@@ -132,14 +132,14 @@ contract TBondExchangeV1 is Ownable, EIP712 {
         (bytes memory makerSignature, bytes memory takerSignature) = abi.decode(signatures, (bytes, bytes));
 
         // TBondFactory를 통해 makerOrder(판매자가 등록한 주문)의 token이 정상적으로 발행된 TBOND인지 확인
-        address token = ITBondFactoryV1(factory).tokens(makerOrder.key);
+        address token = ITBondFactory(factory).tokens(makerOrder.key);
         require(token != address(0));
 
-        require(makerOrder.key == takerOrder.key, "TBondExchnageV1:invalid TBOND key");
-        require(makerOrder.amountSellToken == takerOrder.amountSellToken, "TBondExchnageV1:invalid maker's amount");
-        require(makerOrder.amountBuyToken == takerOrder.amountBuyToken, "TBondExchnageV1:invalid taker's nonce");
-        require(makerOrder.nonce == nonces[makerOrder.owner], "TBondExchnageV1:invalid maker's nonce");
-        require(takerOrder.nonce == nonces[takerOrder.owner], "TBondExchnageV1:invalid taker's nonce");
+        require(makerOrder.key == takerOrder.key, "TBondExchnage:invalid TBOND key");
+        require(makerOrder.amountSellToken == takerOrder.amountSellToken, "TBondExchnage:invalid maker's amount");
+        require(makerOrder.amountBuyToken == takerOrder.amountBuyToken, "TBondExchnage:invalid taker's nonce");
+        require(makerOrder.nonce == nonces[makerOrder.owner], "TBondExchnage:invalid maker's nonce");
+        require(takerOrder.nonce == nonces[takerOrder.owner], "TBondExchnage:invalid taker's nonce");
 
         // maker와 taker의 sign으로 Order가 유효한지 검증
         require(validateOrderAuthorization(makerOrderHash, makerOrder.owner, makerSignature));

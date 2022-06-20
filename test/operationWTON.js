@@ -6,7 +6,7 @@ const addresses = require("./addresses.json");
 const WethJson = require("./weth.json");
 const SwapRouterJson = require("./SwapRouter.json");
 
-describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", function () {
+describe("Default operation test for TBondFactory / TBondFundManager", function () {
   const TOKAMAK_REGISTRY = "0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367";  // StakeRegistry
   const LAYER2_ADDRESS = "0x42ccf0769e87cb2952634f607df1c7d62e0bbc52";    // level19
   
@@ -42,13 +42,13 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
     investorWtonBalance = await wton.balanceOf(investor.address);
   });
 
-  it("1. create TBondFactoryV1", async function () {
-      const Factory = await ethers.getContractFactory("TBondFactoryV1");
+  it("1. create TBondFactory", async function () {
+      const Factory = await ethers.getContractFactory("TBondFactory");
       factory = await Factory.deploy();
       await factory.deployed();
   });
 
-  it("2. create TBondFundManagerV1", async function () {
+  it("2. create TBondFundManager", async function () {
         await factory.create(addresses.tokamak.network.StakeRegistry);
 
         const tbondRound = await factory.round();
@@ -58,12 +58,12 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
         const fundManagerAddr = await factory.tokens(k);
 
       fundManager = await ethers.getContractAt(
-          "TBondFundManagerV1",
+          "TBondFundManager",
           fundManagerAddr
       );
   });
 
-  it("3. setup TBondFundManagerV1", async function () {
+  it("3. setup TBondFundManager", async function () {
       const minimumDeposit = await fundManager.minimumDeposit();
 
       await ton.approve(fundManager.address, minimumDeposit);
