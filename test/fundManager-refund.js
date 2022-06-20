@@ -21,7 +21,7 @@ describe("Tests for TBondFundManagerV1's claim() method(refund)", function () {
   });
 
   beforeEach(async () => {
-    const Factory = await ethers.getContractFactory("TBondFactoryV1");
+    const Factory = await ethers.getContractFactory("TBondFactory");
     factory = await Factory.deploy();
     await factory.deployed();
 
@@ -32,7 +32,7 @@ describe("Tests for TBondFundManagerV1's claim() method(refund)", function () {
     const k = ethers.utils.solidityKeccak256(["string"], [name]);
 
     const fundManagerAddress = await factory.tokens(k);
-    fundManager = await ethers.getContractAt("TBondFundManagerV1", fundManagerAddress);
+    fundManager = await ethers.getContractAt("TBondFundManager", fundManagerAddress);
   });
 
   it("1. refund", async function () {
