@@ -41,7 +41,7 @@ contract TBondFundManager is Ownable, ERC20PresetMinterPauser, DSMath {
     address public stakeRegistry;
 
     /// @dev withdraw() method에서 staking 후 돌려받은 TON에 따라 교환 비율이 변경됨
-    uint256 internal exchangeRate = 1;
+    uint256 internal exchangeRate = 1e18;
 
     enum FundingStatus {
         NONE,
