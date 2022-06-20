@@ -5,7 +5,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC20PresetMinterPauser } from "@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 
 import {ITON} from "../interfaces/ITON.sol";
 import {IWTON} from "../interfaces/IWTON.sol";
@@ -29,8 +28,7 @@ interface ITokamakRegistry {
 /// @title TON/WTON 토큰을 모아서 스테이킹하고 리워드를 분배하는 컨트랙트
 /// @author Jeongun Baek (blackcow@hackersinvestments.com)
 /// @dev [TODO] ERC20PresetMinterPauser 코드에서 필요없는 코드를 제거하고, 우리 필요한 기능만 넣어서 최적화하는 작업 필요
-/// @dev [TODO] stake, unstake, withdraw method 등 Tokamak Network와 관련된 기능들을 분리하는 작업이 필요한지 검토
-contract TBondFundManager is Ownable, ERC20PresetMinterPauser, DSMath {
+contract TBondFundManager is Ownable, ERC20, DSMath {
     using SafeERC20 for IERC20;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
@@ -77,17 +75,10 @@ contract TBondFundManager is Ownable, ERC20PresetMinterPauser, DSMath {
      */
     constructor(address _registry, string memory name)
         nonZeroAddress(_registry)
-        ERC20PresetMinterPauser(name, "TBOND")
+        ERC20(name, "TBOND")
     {
         stakeRegistry = _registry;
         checkTokamak();
-
-        // owner 계정에서 불필요한 권한 제거
-        revokeRole(MINTER_ROLE, _msgSender());
-        revokeRole(PAUSER_ROLE, _msgSender());
-
-        // setup, stake, unstake, withdraw method를 호출하기 위한 권한 부여
-        grantRole(MANAGER_ROLE, _msgSender());
     }
 
     /// @dev 제3자가 커밋할 수 있는 오퍼레이터인지 체크
@@ -107,13 +98,12 @@ contract TBondFundManager is Ownable, ERC20PresetMinterPauser, DSMath {
     }
 
     /// @dev 인센티브를 지급한 지갑 주소
-    function setIncentiveTo(address _incentiveTo) onlyRole(MANAGER_ROLE) external {
+    function setIncentiveTo(address _incentiveTo) onlyOwner external {
         incentiveTo = _incentiveTo;
     }
 
-    function changeManager(address manager) onlyRole(MANAGER_ROLE) external {
-        revokeRole(MANAGER_ROLE, _msgSender());
-        grantRole(MANAGER_ROLE, manager);
+    function changeManager(address newOwner) onlyOwner external {
+        transferOwnership(newOwner);
     }
 
     /// @dev 컨트랙트 동작에 필요한 Tokamak Network의 컨트랙트의 주소를 읽어옴
@@ -167,7 +157,7 @@ contract TBondFundManager is Ownable, ERC20PresetMinterPauser, DSMath {
         uint256 _stakingPeriod,
         uint256 _minTONAmount
     )
-        onlyRole(MANAGER_ROLE)
+        onlyOwner
         nonZeroAddress(_layer2Operator)
         nonLayer2Candidate(_layer2Operator)
         nonZero(_fundraisingPeriod)
@@ -386,7 +376,7 @@ contract TBondFundManager is Ownable, ERC20PresetMinterPauser, DSMath {
      */
     function emergencyRecoveryTransfer(address token, address to, uint256 amount)
         external
-        onlyRole(MANAGER_ROLE)
+        onlyOwner
     {
         require(token != ton && token != wton);
         IERC20(token).safeTransfer(to, amount);

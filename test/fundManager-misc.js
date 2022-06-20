@@ -9,7 +9,7 @@ const SwapRouterJson = require("./SwapRouter.json");
 
 use(solidity);
 
-describe("Tests for TBondFundManager's misc operations", function () {
+describe("Tests for TBondFundManagerV1's misc operations", function () {
   let owner;
   let other;
   let factory;
@@ -34,19 +34,15 @@ describe("Tests for TBondFundManager's misc operations", function () {
     fundManager = await ethers.getContractAt("TBondFundManager", fundManagerAddress);
   });
 
-  it("1. check if mint() fails on owner's account", async function () {
-    await expect(fundManager.mint(owner.address, 1000)).to.be.revertedWith("ERC20PresetMinterPauser: must have minter role to mint");
-  });
-
-  it("2. check if pause() fails on owner's account", async function () {
-    await expect(fundManager.pause()).to.be.revertedWith("ERC20PresetMinterPauser: must have pauser role to pause");
-  });
-
-  it("3. check if changeManager() fails on other's account", async function () {
+  it("1. check if changeManager() fails on other's account", async function () {
     await expect(fundManager.connect(other).changeManager(other)).to.be.reverted;
   });
 
-  it("4. check if setIncentiveTo() fails on other's account", async function () {
+  it("2. check if changeManager() succeeds on owners's account", async function () {
+    await fundManager.connect(owner).changeManager(other.address);
+  });
+
+  it("3. check if setIncentiveTo() fails on other's account", async function () {
     await expect(fundManager.connect(other).setIncentiveTo(other)).to.be.reverted;
   });
 });
