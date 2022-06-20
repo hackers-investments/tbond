@@ -13,6 +13,39 @@ task("getWETH", "deposit ETH to get WETH")
     await WETH.connect(signer).deposit(overrides={value: amount});
   })
 
+task("getWTON", "swap WETH -> WTON")
+  .addParam("account", "address to receive WTON")
+  .addParam("amount", "amount")
+  .setAction(async (taskArgs) => {
+    const signer = await hre.ethers.getSigner(taskArgs.account);
+    const amount = ethers.utils.parseEther(taskArgs.amount);
+
+    const {
+      abi: WETH_ABI
+    } = require("../test/weth.json");
+    const WETH = await hre.ethers.getContractAt(WETH_ABI, addresses.tokens.WETH);
+    await WETH.connect(signer).approve(addresses.uniswap.SwapRouter, amount);
+
+    const {
+      abi: SWAP_ROUTER_ABI
+    } = require("@uniswap/v3-periphery/artifacts/contracts/SwapRouter.sol/SwapRouter.json");
+    const swapRouter = await hre.ethers.getContractAt(SWAP_ROUTER_ABI, addresses.uniswap.SwapRouter);
+
+    const expiryDate = Math.floor(Date.now() / 1000) + 1200;
+    const params = {
+      tokenIn: addresses.tokens.WETH,
+      tokenOut: addresses.tokamak.tokens.WTON,
+      fee: 3000,
+      recipient: taskArgs.account,
+      deadline: expiryDate,
+      amountIn: amount,
+      amountOutMinimum: 0,
+      sqrtPriceLimitX96: 0,
+    };
+
+    await swapRouter.connect(signer).exactInputSingle(params);
+  });
+
 task("getTON", "swap WETH -> WTON & unwrapping WTON -> TON")
   .addParam("account", "address to receive TON")
   .addParam("amount", "amount")
@@ -85,6 +118,16 @@ task("deployTBOND", "Deploy TBOND contract")
       ethers.utils.parseEther("10000"));
   })
 
+task("getKey", "get key for TBondFundManagerV1")
+  .addParam("account", "address of admin")
+  .addParam("factory", "address of TBONDFactoryV1 contract")
+  .setAction(async (taskArgs) => {
+    const signer = await hre.ethers.getSigner(taskArgs.account);
+    const FACTORY = await hre.ethers.getContractAt("TBondFactoryV1", taskArgs.factory);
+    const key = await FACTORY.getKey(signer.address, "TBOND", "TBOND");
+    console.log(`KEY ${key}`);
+  })
+
 task("stake", "staking TON")
   .addParam("account", "address of admin")
   .addParam("factory", "address of TBONDFactoryV1 contract")
@@ -131,6 +174,8 @@ task("deployTBONDExchange", "Deploy TBOND Exchange contract")
     const EXCHANGE = await Exchange.connect(signer).deploy(
       taskArgs.factory, addresses.tokamak.tokens.WTON
     );
+    await EXCHANGE.deployed();
+
     console.log(`EXCHANGE : ${EXCHANGE.address}`);
   })
 
@@ -139,4 +184,5 @@ task("hardhat_mine", "mine blocks")
   .setAction(async (taskArgs, hre) => {
     await hre.network.provider.send('hardhat_mine', [taskArgs.blocks]);
   })
+
 module.exports = {};

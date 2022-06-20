@@ -33,15 +33,14 @@ describe("Tests for TBondExchangeV1's default operations", function () {
     ton = await ethers.getContractAt('IERC20', addresses.tokamak.tokens.TON);
     wton = await ethers.getContractAt('IERC20', addresses.tokamak.tokens.WTON);
 
-    const NAME = "TBOND-22051901";
-    const SYMBOL = "TBOND"
-
     const Factory = await ethers.getContractFactory("TBondFactoryV1");
     factory = await Factory.deploy();
     await factory.deployed();
-    await factory.create(addresses.tokamak.network.StakeRegistry, NAME, SYMBOL);
+    await factory.create(addresses.tokamak.network.StakeRegistry);
 
-    key = await factory.getKey(owner.address, NAME, SYMBOL);
+    const tbondRound = await factory.round();
+    const name = "TBOND-" + tbondRound;
+    key = ethers.utils.solidityKeccak256(["string"], [name]);
 
     const fundManagerAddr = await factory.tokens(key);
 
@@ -75,7 +74,7 @@ describe("Tests for TBondExchangeV1's default operations", function () {
     domain = {
       name: 'TBOND Exchange',
       version: '1.0',
-      chainId: 7777,
+      chainId: 31337,
       verifyingContract: exchange.address
     };
 

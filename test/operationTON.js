@@ -1,6 +1,7 @@
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
 const utils = require("./utils");
+const addresses = require("./addresses.json");
 
 const WethJson = require("./weth.json");
 const SwapRouterJson = require("./SwapRouter.json");
@@ -41,10 +42,13 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
   });
 
   it("2. create TBondFundManagerV1", async function () {
-      const key = await factory.getKey(owner.address, "TBOND-22051901", "TBOND");
-      await factory.create(TOKAMAK_REGISTRY, "TBOND-22051901", "TBOND");
+      await factory.create(addresses.tokamak.network.StakeRegistry);
 
-      const fundManagerAddr = await factory.tokens(key);
+      const tbondRound = await factory.round();
+      const name = "TBOND-" + tbondRound;
+      const k = ethers.utils.solidityKeccak256(["string"], [name]);
+
+      const fundManagerAddr = await factory.tokens(k);
 
       fundManager = await ethers.getContractAt(
           "TBondFundManagerV1",
@@ -59,7 +63,7 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
         TON
       );
       await ton.approve(fundManager.address, minimumDeposit);
-      await fundManager.setup(LAYER2_ADDRESS,
+      await fundManager.setup("0x42ccf0769e87cb2952634f607df1c7d62e0bbc52",
           1000,   // fundRaisingPeriod
           10000,  // _stakingPeriod 
           ethers.utils.parseEther('1000') // _minTONAmount

@@ -49,10 +49,13 @@ describe("Default operation test for TBondFactoryV1 / TBondFundManagerV1", funct
   });
 
   it("2. create TBondFundManagerV1", async function () {
-      const key = await factory.getKey(owner.address, "TBOND-22051901", "TBOND");
-      await factory.create(TOKAMAK_REGISTRY, "TBOND-22051901", "TBOND");
+        await factory.create(addresses.tokamak.network.StakeRegistry);
 
-      const fundManagerAddr = await factory.tokens(key);
+        const tbondRound = await factory.round();
+        const name = "TBOND-" + tbondRound;
+        const k = ethers.utils.solidityKeccak256(["string"], [name]);
+
+        const fundManagerAddr = await factory.tokens(k);
 
       fundManager = await ethers.getContractAt(
           "TBondFundManagerV1",

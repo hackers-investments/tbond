@@ -6,14 +6,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import {EIP712} from "../libs/EIP712.sol";
-import {ITBondFactoryV1} from "../TBond/interfaces/ITBondFactoryV1.sol";
+import {ITBondFactoryV1} from "../tbond/interfaces/ITBondFactoryV1.sol";
 
 contract TBondExchangeV1 is Ownable, EIP712 {
     using SafeERC20 for IERC20;
 
     string public constant name = "TBOND Exchange";
     string public constant version = "1.0";
-    uint256 public constant chainId = 7777;
+    uint256 public constant chainId = 31337;
 
     mapping(address => uint256) public nonces;
 

@@ -16,9 +16,6 @@ use(solidity);
 describe("Tests for TBondFundManagerV1 unstake() method on other's account", function () {
   let owner;
   let other;
-
-  const NAME = "TBOND-220520";
-  const SYMBOL = "TBOND";
   
   let fundManager;
 
@@ -28,10 +25,13 @@ describe("Tests for TBondFundManagerV1 unstake() method on other's account", fun
     const factory = await Factory.deploy();
     await factory.deployed();
 
-    const key = factory.getKey(owner.address, NAME, SYMBOL);
-    await factory.create(addresses.tokamak.network.StakeRegistry, NAME, SYMBOL);
+    await factory.create(addresses.tokamak.network.StakeRegistry);
 
-    const fundManagerAddress = await factory.tokens(key);
+    const tbondRound = await factory.round();
+    const name = "TBOND-" + tbondRound;
+    const k = ethers.utils.solidityKeccak256(["string"], [name]);
+
+    const fundManagerAddress = await factory.tokens(k);
     fundManager = await ethers.getContractAt("TBondFundManagerV1", fundManagerAddress);
   });
 

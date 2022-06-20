@@ -2,27 +2,27 @@
 pragma solidity ^0.8.13;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 import {TBondFundManagerV1} from "./TBondFundManagerV1.sol";
 
 contract TBondFactoryV1 is Ownable {
     mapping (bytes32 => address) public tokens;
 
-    function create(address _registry, string memory name, string memory symbol)
+    uint256 public round;
+
+    function create(address _registry)
         onlyOwner
         external
-        returns(address tbondAddress)
     {
-        bytes32 key = getKey(_msgSender(), name, symbol);
+        string memory name = string.concat("TBOND-", Strings.toString(++round));
+
+        bytes32 key = keccak256(abi.encodePacked(name));
         require(tokens[key] == address(0), "TBondFactoryV1:alredy exists");
 
-        tbondAddress = address(new TBondFundManagerV1(_registry, name, symbol));
+        address tbondAddress = address(new TBondFundManagerV1(_registry, name));
         TBondFundManagerV1(tbondAddress).changeManager(_msgSender());
 
         tokens[key] = tbondAddress;
-    }
-
-    function getKey(address owner, string memory name, string memory symbol) public pure returns(bytes32) {
-        return keccak256(abi.encodePacked(owner, name, symbol));
     }
 }

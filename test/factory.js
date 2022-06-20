@@ -19,41 +19,25 @@ describe("Tests for TBondFactoryV1's default operations", () => {
         [owner1, owner2] = await ethers.getSigners();
     });
 
-    it("1. duplicate owner / name / symbol TBondFundManagerV1 creation", async function () {
-        const NAME = "TBOND-22051901";
-        const SYMBOL = "TBOND"
-
-        await factory.create(TOKAMAK_REGISTRY, NAME, SYMBOL);
-        
+    it("1. create TBondFundManagerV1 from unprivileged account", async function () {
         await expect(
-            factory.create(TOKAMAK_REGISTRY, NAME, SYMBOL)
-        ).to.be.revertedWith('TBondFactoryV1:alredy exists');
-    });
-
-    it("2. create TBondFundManagerV1 from unprivileged account", async function () {
-        const NAME = "TBOND-22051901";
-        const SYMBOL = "TBOND"
-
-        await factory.create(TOKAMAK_REGISTRY, NAME, SYMBOL);
-        await expect(
-            factory.connect(owner2).create(TOKAMAK_REGISTRY, NAME, SYMBOL)
+            factory.connect(owner2).create(TOKAMAK_REGISTRY)
         ).to.be.revertedWith('Ownable: caller is not the owner');
     });
 
-    it("3. check key and token pair", async function () {
-        const NAME = "TBOND-22051901";
-        const SYMBOL = "TBOND"
-
-        await factory.create(TOKAMAK_REGISTRY, NAME, SYMBOL);
-        const key = await factory.getKey(owner1.address, NAME, SYMBOL);
+    it("2. check key and token pair", async function () {
+        await factory.create(TOKAMAK_REGISTRY);
+        const tbondRound = await factory.round();
+        const name = "TBOND-" + tbondRound;
+        const k = ethers.utils.solidityKeccak256(["string"], [name]);
         const tbond = await ethers.getContractAt(
             "ERC20",
-            await factory.tokens(key)
+            await factory.tokens(k)
         );
 
-        const name = await tbond.name();
-        const symbol = await tbond.symbol();
-        expect(name).to.equal(NAME);
-        expect(symbol).to.equal(SYMBOL);
+        const _name = await tbond.name();
+        const _symbol = await tbond.symbol();
+        expect(_name).to.equal(name);
+        expect(_symbol).to.equal("TBOND");
     });
 });

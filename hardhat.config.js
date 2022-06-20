@@ -5,6 +5,9 @@ const { task } = require("hardhat/config");
 
 require('dotenv').config()
 const path = require("path")
+
+require('./tasks/TBONDManager');
+
 const INFURA_KEY = "";
 
 module.exports = {
@@ -24,7 +27,8 @@ module.exports = {
           balance:"10000000000000000000000000"
       }],
       forking:{
-        url: `https://mainnet.infura.io/v3/${INFURA_KEY}`
+        url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
+	      chainId: 1337
       }
     },
   },

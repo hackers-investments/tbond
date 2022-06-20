@@ -74,11 +74,10 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
     /**
      * @param _registry    Tokamak Network의 주요 변수들이 저장된 컨트랙트(TONStarter의 StakeRegistry)
      * @param name         BOND 토큰의 이름
-     * @param symbol       BOND 토큰의 심볼. ex) TBDON-YYMMDDRRR, TBOND-220505001, TBOND-220505002, ...
      */
-    constructor(address _registry, string memory name, string memory symbol)
+    constructor(address _registry, string memory name)
         nonZeroAddress(_registry)
-        ERC20PresetMinterPauser(name, symbol)
+        ERC20PresetMinterPauser(name, "TBOND")
     {
         stakeRegistry = _registry;
         checkTokamak();

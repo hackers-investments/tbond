@@ -9,6 +9,7 @@
     "nodemon": "^2.0.16"
   },
   "dependencies": {
+    "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/contracts": "^4.6.0",
     "@uniswap/v3-core": "^1.0.1",
     "@uniswap/v3-periphery": "^1.4.1",
