@@ -73,7 +73,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
 
     /**
      * @param _registry    Tokamak Network의 주요 변수들이 저장된 컨트랙트(TONStarter의 StakeRegistry)
-     * @param name         BOND 토큰의 이름
+     * @param name         TBOND 토큰의 이름
      */
     constructor(address _registry, string memory name)
         nonZeroAddress(_registry)
@@ -90,6 +90,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
         grantRole(MANAGER_ROLE, _msgSender());
     }
 
+    /// @dev 제3자가 커밋할 수 있는 오퍼레이터인지 체크
     modifier nonLayer2Candidate(address candidate) {
         require(ICandidate(candidate).isLayer2Candidate() == false, "TBondFundRaiser: layer2");
         _;
@@ -105,6 +106,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
         _;
     }
 
+    /// @dev 인센티브를 지급한 지갑 주소
     function setIncentiveTo(address _incentiveTo) onlyRole(MANAGER_ROLE) external {
         incentiveTo = _incentiveTo;
     }
@@ -115,7 +117,7 @@ contract TBondFundManagerV1 is Ownable, ERC20PresetMinterPauser, DSMath {
     }
 
     /// @dev 컨트랙트 동작에 필요한 Tokamak Network의 컨트랙트의 주소를 읽어옴
-    function checkTokamak() public {
+    function checkTokamak() internal {
         if (ton == address(0)) {
             (
                 address _ton,
