@@ -59,7 +59,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
     uint256 public stakingEndBlockNumber;
 
     /* FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량(10,000 TON) */
-    uint256 public constant minimumDeposit = 10000 * (10 ** 18);
+    uint256 constant minimumDeposit = 10000 * (10 ** 18);
     /* 스테이킹이 끝난 뒤 컨트랙트에 쌓인 TON 토큰 수량 */
     uint256 public claimedTONAmount;
     /* 발행된 TBOND 토큰의 수량 */

@@ -4,7 +4,7 @@ require('hardhat-gas-reporter')
 const { task } = require('hardhat/config')
 require('dotenv').config()
 require('./tasks/TBONDManager')
-require('./tasks/test')
+require('./tasks/rework')
 
 module.exports = {
   networks : {
