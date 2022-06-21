@@ -17,7 +17,6 @@ task('rework').setAction(async () => {
   await wton.mint(user2.address, parsewTon(1000000))
   log(`[1] Setup Accounts`)
   log(`admin`)
-  log(await ton.balanceOf(admin.address))
   log(`ton balance:${fromTon(await ton.balanceOf(admin.address))}`)
   log(`wton balance:${fromwTon(await wton.balanceOf(admin.address))}`)
   log(`user1`)
@@ -28,7 +27,7 @@ task('rework').setAction(async () => {
   log(`wton balance:${fromwTon(await wton.balanceOf(user2.address))}`)
   log()
 
-  // step 2 setup service
+  // // step 2 setup service
   const factory = await (await ethers.getContractFactory('TBondFactory', admin)).deploy()
   await factory.deployed()
   set('factory', factory.address)
@@ -42,7 +41,7 @@ task('rework').setAction(async () => {
   log(`TBond-1 : ${get('manager')}`)
   log()
 
-  // step 3 buy bond
+  // // step 3 buy bond
   log(`[3] Buy Bond-1`)
   await ton.connect(user1).approve(get('manager'), parseTon(1000))
   await wton.connect(user1).approve(get('manager'), parsewTon(1000))
@@ -65,23 +64,23 @@ task('rework').setAction(async () => {
   log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`)
   log()
 
-  // step 4 stake
+  // // step 4 stake
   log(`[4] Stake TBOND-1`)
   mining(100)
-  manager.stake(overrides = { gasLimit: 10000000 })
+  await manager.stake(overrides = { gasLimit: 10000000 })
   tonBalance = fromTon(await ton.balanceOf(get('manager')))
   wtonBalance = fromwTon(await wton.balanceOf(get('manager')))
   log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`)
   log()
 
-  // step 5 unstake
-  log(`[5] Unstake TBOND-1`)
+  // // step 5 unstake
+  log(`[5] Unstake TBOND-1 & Withraw`)
   mining(100)
-  manager.unstake()
+  await manager.unstake()
+  mining(0x16b76)
+  await manager.withdraw()
   tonBalance = fromTon(await ton.balanceOf(get('manager')))
   wtonBalance = fromwTon(await wton.balanceOf(get('manager')))
   log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`)
   log()
-
-  // step 6 withraw
 })

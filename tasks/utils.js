@@ -18,10 +18,7 @@ const utils = {
   LAYER2:'0x42ccf0769e87cb2952634f607df1c7d62e0bbc52',
   SeigManager:'0x710936500ac59e8551331871cbad3d33d5e0d909',
   StakeRegistry:'0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367',
-  set:(k, v) => {
-    if (hre.config.tbond == undefined) hre.config.tbond = {}
-    hre.config.tbond[k] = v
-  },
+  set:(k, v) => hre.config.tbond = Object.assign(Object(hre.config.tbond), {[k]:v}),
   get:k => hre.config.tbond[k],
   key:n => ethers.utils.id(`TBOND-${n}`),
   log:msg => console.log(msg ? msg : ''),
