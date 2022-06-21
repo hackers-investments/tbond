@@ -15,12 +15,12 @@ contract TBondExchange is Ownable, EIP712 {
     string private constant version = "1.0";
     uint256 private constant chainId = 31337;
 
-    mapping(address => uint256) private nonces;
+    mapping(address => uint256) public nonces;
 
     /* TBOND 토큰 주소를 보관하고 있는 factory 컨트랙트 주소 */
-    address factory;
+    address private factory;
     /* TON 토큰은 approve를 해도 transferFrom으로 전송할 수 없기 때문에 WTON 토큰 사용 */
-    address wton;
+    address private wton;
 
     bytes private personalSignPrefix = "\x19Ethereum Signed Message:\n";
 
@@ -126,7 +126,7 @@ contract TBondExchange is Ownable, EIP712 {
      * @param takerOrder 구매자의 주문 정보
      * @param signatures 판매자와 구매자가 주문 정보를 sign한 값
      */
-    function executeOrder(Order memory makerOrder, Order memory takerOrder, bytes memory signatures) private {
+    function executeOrder(Order memory makerOrder, Order memory takerOrder, bytes memory signatures) external {
         bytes32 makerOrderHash = hashOrder(makerOrder);
         bytes32 takerOrderHash = hashOrder(takerOrder);
         (bytes memory makerSignature, bytes memory takerSignature) = abi.decode(signatures, (bytes, bytes));
