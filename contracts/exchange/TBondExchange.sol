@@ -11,21 +11,21 @@ import {ITBondFactory} from "../tbond/interfaces/ITBondFactory.sol";
 contract TBondExchange is Ownable, EIP712 {
     using SafeERC20 for IERC20;
 
-    string public constant name = "TBOND Exchange";
-    string public constant version = "1.0";
-    uint256 public constant chainId = 31337;
+    string private constant name = "TBOND Exchange";
+    string private constant version = "1.0";
+    uint256 private constant chainId = 31337;
 
-    mapping(address => uint256) public nonces;
+    mapping(address => uint256) private nonces;
 
     /* TBOND 토큰 주소를 보관하고 있는 factory 컨트랙트 주소 */
     address factory;
     /* TON 토큰은 approve를 해도 transferFrom으로 전송할 수 없기 때문에 WTON 토큰 사용 */
     address wton;
 
-    bytes internal personalSignPrefix = "\x19Ethereum Signed Message:\n";
+    bytes private personalSignPrefix = "\x19Ethereum Signed Message:\n";
 
     /* 구조체가 변경될 경우 front-end의 코드도 함께 변경해야함 */
-    bytes32 constant ORDER_TYPEHASH = keccak256(
+    bytes32 constant private ORDER_TYPEHASH = keccak256(
         "Order(address owner,bytes32 key,uint256 amountSellToken,uint256 amountBuyToken,uint256 nonce)"
     );
 
@@ -57,7 +57,7 @@ contract TBondExchange is Ownable, EIP712 {
     }
 
     function hashToSign(bytes32 orderHash)
-        internal
+        private
         view
         returns (bytes32 _hash)
     {
@@ -70,7 +70,7 @@ contract TBondExchange is Ownable, EIP712 {
     }
 
     function hashOrder(Order memory order)
-        internal
+        private
         pure
         returns (bytes32 _hash)
     {
@@ -92,7 +92,7 @@ contract TBondExchange is Ownable, EIP712 {
      * @param signature 매수자가 보낸 매도자 / 매수자의 주문 데이터를 sign 한 값
      */
     function validateOrderAuthorization(bytes32 _hash, address owner, bytes memory signature)
-        internal
+        private
         view
         returns (bool)
     {
@@ -126,7 +126,7 @@ contract TBondExchange is Ownable, EIP712 {
      * @param takerOrder 구매자의 주문 정보
      * @param signatures 판매자와 구매자가 주문 정보를 sign한 값
      */
-    function executeOrder(Order memory makerOrder, Order memory takerOrder, bytes memory signatures) external {
+    function executeOrder(Order memory makerOrder, Order memory takerOrder, bytes memory signatures) private {
         bytes32 makerOrderHash = hashOrder(makerOrder);
         bytes32 takerOrderHash = hashOrder(takerOrder);
         (bytes memory makerSignature, bytes memory takerSignature) = abi.decode(signatures, (bytes, bytes));
@@ -163,7 +163,7 @@ contract TBondExchange is Ownable, EIP712 {
      * 가격을 높이게 되면 이전에 낮게 설정한 주문 데이터와 sign을 재사용할 수 있기 때문에 nonce를 업데이트 해야함.
      * NOTE: 주문을 취소하거나, 가격을 높게 변경할 때는 **무조건** updateNonce()를 통해 nonce 값을 변경해야함.
      */ 
-    function updateNonce() external {
+    function updateNonce() private {
         unchecked {
             nonces[_msgSender()] += 1;
         }

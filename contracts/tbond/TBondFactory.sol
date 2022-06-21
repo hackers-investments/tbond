@@ -7,13 +7,13 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {TBondFundManager} from "./TBondFundManager.sol";
 
 contract TBondFactory is Ownable {
-    mapping (bytes32 => address) public tokens;
+    mapping (bytes32 => address) private tokens;
 
-    uint256 public round;
+    uint256 private round;
 
     function create(address _registry)
         onlyOwner
-        external
+        private
     {
         string memory name = string.concat("TBOND-", Strings.toString(++round));
 

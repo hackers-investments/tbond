@@ -49,25 +49,25 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
         END
     }
 
-    FundingStatus fundStatus;
+    FundingStatus private fundStatus;
 
-    address public layer2Operator;
-    uint256 public stakingPeriod;
-    uint256 public minTONAmount;
-    uint256 public withdrawBlockNumber;
-    uint256 public fundraisingEndBlockNumber;
-    uint256 public stakingEndBlockNumber;
+    address private layer2Operator;
+    uint256 private stakingPeriod;
+    uint256 private minTONAmount;
+    uint256 private withdrawBlockNumber;
+    uint256 private fundraisingEndBlockNumber;
+    uint256 private stakingEndBlockNumber;
 
     /* FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량(10,000 TON) */
-    uint256 constant minimumDeposit = 10000 * (10 ** 18);
+    uint256 constant private minimumDeposit = 10000 * (10 ** 18);
     /* 스테이킹이 끝난 뒤 컨트랙트에 쌓인 TON 토큰 수량 */
-    uint256 public claimedTONAmount;
+    uint256 private claimedTONAmount;
     /* 발행된 TBOND 토큰의 수량 */
-    uint256 public issuedTbondAmount;
+    uint256 private issuedTbondAmount;
     /* FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량 */
-    uint256 public operatorDeposit;
+    uint256 private operatorDeposit;
     /* 인센티브를 지급할 주소 */
-    address public incentiveTo;
+    address private incentiveTo;
 
     /**
      * @param _registry    Tokamak Network의 주요 변수들이 저장된 컨트랙트(TONStarter의 StakeRegistry)
@@ -98,7 +98,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
     }
 
     /// @dev 인센티브를 지급한 지갑 주소
-    function setIncentiveTo(address _incentiveTo) onlyOwner external {
+    function setIncentiveTo(address _incentiveTo) onlyOwner private {
         incentiveTo = _incentiveTo;
     }
 
@@ -107,7 +107,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
     }
 
     /// @dev 컨트랙트 동작에 필요한 Tokamak Network의 컨트랙트의 주소를 읽어옴
-    function checkTokamak() internal {
+    function checkTokamak() private {
         if (ton == address(0)) {
             (
                 address _ton,
@@ -132,7 +132,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
      * 정해진 수수료(0.3%)만큼의 TBOND를 추가 발행해서 지정된 지갑으로 전송
      * @param balance 펀딩된 TON 토큰 수량
      */
-    function giveIncentive(uint256 balance) internal {
+    function giveIncentive(uint256 balance) private {
         // rounding error를 최소화하기 위해 1000000(1e6) 사용
         uint256 incentiveAmount = balance * (1000000 - 997000) / 1000000;
         _mint(incentiveTo, incentiveAmount);
@@ -163,7 +163,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
         nonZero(_fundraisingPeriod)
         nonZero(_stakingPeriod)
         nonZero(_minTONAmount)
-        external
+        private
     {
         require(fundStatus == FundingStatus.NONE, "FundManager:only be called in NONE");
 
@@ -186,7 +186,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
      *
      * - despoit() method 호출 전에 amount만큼의 TON 토큰을 컨트랙트에 approve 해줘야함
      */
-    function depositTON(uint256 amount) nonZero(amount) external {
+    function depositTON(uint256 amount) nonZero(amount) private {
         require(fundStatus == FundingStatus.FUNDRAISING, "FundManager:only be called in FUNDRAISING");
 
         IERC20(ton).safeTransferFrom(_msgSender(), address(this), amount);
@@ -203,7 +203,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
      *
      * - despoit() method 호출 전에 amount만큼의 WTON 토큰을 컨트랙트에 approve 해줘야함
      */
-    function depositWTON(uint256 amount) nonZero(amount) external {
+    function depositWTON(uint256 amount) nonZero(amount) private {
         require(fundStatus == FundingStatus.FUNDRAISING, "FundManager:only be called in FUNDRAISING");
 
         IERC20(wton).safeTransferFrom(_msgSender(), address(this), amount);
@@ -225,7 +225,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
     function depositBoth(uint256 amountTon, uint256 amountWton)
         nonZero(amountTon)
         nonZero(amountWton)
-        external
+        private
     {
         require(fundStatus == FundingStatus.FUNDRAISING, "FundManager:only be called in FUNDRAISING");
 
@@ -246,7 +246,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
      *
      * NOTE: 펀딩된 TON 토큰 수량의 0.3%만큼의 TBOND를 추가 발행해서 인센티브로 지급
      */
-    function stake() external {
+    function stake() private {
         require(fundStatus == FundingStatus.FUNDRAISING, "FundManager:only be called in FUNDRAISING");
         require(block.number >= fundraisingEndBlockNumber);
 
@@ -288,7 +288,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
      * 
      * - staking 후 지정된 블록(stakingPeriod)이 지난 뒤 호출 가능
      */
-    function unstake() external {
+    function unstake() private {
         require(fundStatus == FundingStatus.STAKING, "FundManager:only be called in STAKING");
         require(stakingEndBlockNumber <= block.number, "FundManager:funding is not end yet");
         
@@ -319,7 +319,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
      * 
      * - unstaking 후 지정된 블록(withdrawDelay)이 지난 뒤 호출 가능
      */
-    function withdraw() external {
+    function withdraw() private {
         require(fundStatus == FundingStatus.UNSTAKING, "FundManager:only be called in UNSTAKING");
         require(withdrawBlockNumber <= block.number, "FundManager:unstaking is not ended yet");
         
@@ -342,7 +342,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
      * 
      * @param amount TBOND 토큰 수량
      */  
-    function claim(uint256 amount) nonZero(amount) external {
+    function claim(uint256 amount) nonZero(amount) private {
         // deposit된 TON/WTON을 스테이킹하기 전에는 exchangeRate가 1로 설정되어 있기 때문에 언제든지 환불 가능
         // TON/WTON이 staking되면 컨트랙트의 balance가 0이기 때문에 트랜잭션이 실패함
         // FundingStatus와 fundraisingEndBlockNumber에 접근하지 않으면 소모되는 gas가 약 6%정도 감소함
@@ -375,7 +375,7 @@ contract TBondFundManager is Ownable, ERC20, DSMath {
      * @notice 관리자가 악용하는 것을 방지하기 위해 TON / WTON 전송은 제한됨
      */
     function emergencyRecoveryTransfer(address token, address to, uint256 amount)
-        external
+        private
         onlyOwner
     {
         require(token != ton && token != wton);
