@@ -1,86 +1,102 @@
-require('./utils.js').imports()
+require('./utils.js').imports();
 
 task('rework').setAction(async () => {
   // step 1 setup accounts
-  start_impersonate(WTON)
-  start_impersonate(SeigManager)
-  const [admin, user1, user2] = await ethers.getSigners()
-  await network.provider.send('hardhat_setBalance', [WTON, hex(parseEth(10000))])
-  await network.provider.send('hardhat_setBalance', [SeigManager, hex(parseEth(10000))])
-  const ton = new ethers.Contract(TON, ABI, await ethers.getSigner(WTON))
-  const wton = new ethers.Contract(WTON, ABI, await ethers.getSigner(SeigManager))
-  await ton.mint(admin.address, parseTon(1000000))
-  await ton.mint(user1.address, parseTon(1000000))
-  await ton.mint(user2.address, parseTon(1000000))
-  await wton.mint(admin.address, parsewTon(1000000))
-  await wton.mint(user1.address, parsewTon(1000000))
-  await wton.mint(user2.address, parsewTon(1000000))
-  log(`[1] Setup Accounts`)
-  log(`admin`)
-  log(`ton balance:${fromTon(await ton.balanceOf(admin.address))}`)
-  log(`wton balance:${fromwTon(await wton.balanceOf(admin.address))}`)
-  log(`user1`)
-  log(`ton balance:${fromTon(await ton.balanceOf(user1.address))}`)
-  log(`wton balance:${fromwTon(await wton.balanceOf(user1.address))}`)
-  log(`user2`)
-  log(`ton balance:${fromTon(await ton.balanceOf(user2.address))}`)
-  log(`wton balance:${fromwTon(await wton.balanceOf(user2.address))}`)
-  log()
+  start_impersonate(WTON);
+  start_impersonate(SeigManager);
+  const [admin, user1, user2] = await ethers.getSigners();
+  await network.provider.send('hardhat_setBalance', [
+    WTON,
+    hex(parseEth(10000)),
+  ]);
+  await network.provider.send('hardhat_setBalance', [
+    SeigManager,
+    hex(parseEth(10000)),
+  ]);
+  const ton = new ethers.Contract(TON, ABI, await ethers.getSigner(WTON));
+  const wton = new ethers.Contract(
+    WTON,
+    ABI,
+    await ethers.getSigner(SeigManager)
+  );
+  await ton.mint(admin.address, parseTon(1000000));
+  await ton.mint(user1.address, parseTon(1000000));
+  await ton.mint(user2.address, parseTon(1000000));
+  await wton.mint(admin.address, parsewTon(1000000));
+  await wton.mint(user1.address, parsewTon(1000000));
+  await wton.mint(user2.address, parsewTon(1000000));
+  log(`[1] Setup Accounts`);
+  log(`admin`);
+  log(`ton balance:${fromTon(await ton.balanceOf(admin.address))}`);
+  log(`wton balance:${fromwTon(await wton.balanceOf(admin.address))}`);
+  log(`user1`);
+  log(`ton balance:${fromTon(await ton.balanceOf(user1.address))}`);
+  log(`wton balance:${fromwTon(await wton.balanceOf(user1.address))}`);
+  log(`user2`);
+  log(`ton balance:${fromTon(await ton.balanceOf(user2.address))}`);
+  log(`wton balance:${fromwTon(await wton.balanceOf(user2.address))}`);
+  log();
 
   // // step 2 setup service
-  const factory = await (await ethers.getContractFactory('TBondFactory', admin)).deploy()
-  await factory.deployed()
-  set('factory', factory.address)
-  await factory.create(StakeRegistry)
-  set('manager', await factory.tokens(key('1')))
-  const manager = await ethers.getContractAt('TBondFundManager', get('manager'), admin)
-  await ton.connect(admin).approve(get('manager'), parseTon(10000))
-  await manager.setup(LAYER2, 100, 100, parseTon(15000))
-  log(`[2] Setup Service`)
-  log(`TBondFactory : ${get('factory')}`)
-  log(`TBond-1 : ${get('manager')}`)
-  log()
+  const factory = await (
+    await ethers.getContractFactory('TBondFactory', admin)
+  ).deploy();
+  await factory.deployed();
+  set('factory', factory.address);
+  await factory.create(StakeRegistry);
+  set('manager', await factory.bonds(1));
+  const manager = await ethers.getContractAt(
+    'TBondManager',
+    get('manager'),
+    admin
+  );
+  await ton.connect(admin).approve(get('manager'), parseTon(10000));
+  await manager.setup(LAYER2, 100, 100, parseTon(15000));
+  log(`[2] Setup Service`);
+  log(`TBondFactory : ${get('factory')}`);
+  log(`TBond-1 : ${get('manager')}`);
+  log();
 
   // // step 3 buy bond
-  log(`[3] Buy Bond-1`)
-  await ton.connect(user1).approve(get('manager'), parseTon(1000))
-  await wton.connect(user1).approve(get('manager'), parsewTon(1000))
-  await manager.connect(user1).depositBoth(parseTon(1000), parsewTon(1000))
-  log(`user1 depositBoth(1000ton, 1000wton)`)
-  await ton.connect(user2).approve(get('manager'), parseTon(2000))
-  await wton.connect(user2).approve(get('manager'), parsewTon(2000))
-  await manager.connect(user2).depositTON(parseTon(2000))
-  await manager.connect(user2).depositWTON(parsewTon(2000))
-  log(`user2 depositTON(2000ton)`)
-  log(`user2 depositWTON(2000wton)`)
-  log(`user1`)
-  log(`ton balance:${fromTon(await ton.balanceOf(user1.address))}`)
-  log(`wton balance:${fromwTon(await wton.balanceOf(user1.address))}`)
-  log(`user2`)
-  log(`ton balance:${fromTon(await ton.balanceOf(user2.address))}`)
-  log(`wton balance:${fromwTon(await wton.balanceOf(user2.address))}`)
-  let tonBalance = fromTon(await ton.balanceOf(get('manager')))
-  let wtonBalance = fromwTon(await wton.balanceOf(get('manager')))
-  log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`)
-  log()
+  log(`[3] Buy Bond-1`);
+  await ton.connect(user1).approve(get('manager'), parseTon(1000));
+  await wton.connect(user1).approve(get('manager'), parsewTon(1000));
+  await manager.connect(user1).depositBoth(parseTon(1000), parsewTon(1000));
+  log(`user1 depositBoth(1000 ton, 1000 wton)`);
+  await ton.connect(user2).approve(get('manager'), parseTon(2000));
+  await wton.connect(user2).approve(get('manager'), parsewTon(2000));
+  await manager.connect(user2).depositTON(parseTon(2000));
+  await manager.connect(user2).depositWTON(parsewTon(2000));
+  log(`user2 depositTON(2000 ton)`);
+  log(`user2 depositWTON(2000 wton)`);
+  log(`user1`);
+  log(`ton balance:${fromTon(await ton.balanceOf(user1.address))}`);
+  log(`wton balance:${fromwTon(await wton.balanceOf(user1.address))}`);
+  log(`user2`);
+  log(`ton balance:${fromTon(await ton.balanceOf(user2.address))}`);
+  log(`wton balance:${fromwTon(await wton.balanceOf(user2.address))}`);
+  let tonBalance = fromTon(await ton.balanceOf(get('manager')));
+  let wtonBalance = fromwTon(await wton.balanceOf(get('manager')));
+  log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`);
+  log();
 
   // // step 4 stake
-  log(`[4] Stake TBOND-1`)
-  mining(100)
-  await manager.stake(overrides = { gasLimit: 10000000 })
-  tonBalance = fromTon(await ton.balanceOf(get('manager')))
-  wtonBalance = fromwTon(await wton.balanceOf(get('manager')))
-  log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`)
-  log()
+  log(`[4] Stake TBOND-1`);
+  mining(100);
+  await manager.stake((overrides = { gasLimit: 10000000 }));
+  tonBalance = fromTon(await ton.balanceOf(get('manager')));
+  wtonBalance = fromwTon(await wton.balanceOf(get('manager')));
+  log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`);
+  log();
 
   // // step 5 unstake
-  log(`[5] Unstake TBOND-1 & Withraw`)
-  mining(100)
-  await manager.unstake()
-  mining(0x16b76)
-  await manager.withdraw()
-  tonBalance = fromTon(await ton.balanceOf(get('manager')))
-  wtonBalance = fromwTon(await wton.balanceOf(get('manager')))
-  log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`)
-  log()
-})
+  log(`[5] Unstake & Withraw TBOND-1`);
+  mining(100);
+  await manager.unstake();
+  mining(0x16b76);
+  await manager.withdraw();
+  tonBalance = fromTon(await ton.balanceOf(get('manager')));
+  wtonBalance = fromwTon(await wton.balanceOf(get('manager')));
+  log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`);
+  log();
+});

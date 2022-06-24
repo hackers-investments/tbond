@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.15;
 
 // https://github.com/dapphub/ds-math/blob/de45767/src/math.sol
 /// math.sol -- mixin for inline numerical wizardry
@@ -18,19 +18,21 @@ pragma solidity ^0.8.13;
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 contract DSMath {
-  function add(uint x, uint y) internal pure returns (uint z) {
-    require((z = x + y) >= x, "ds-math-add-overflow");
-  }
-  function mul(uint x, uint y) internal pure returns (uint z) {
-    require(y == 0 || (z = x * y) / y == x, "ds-math-mul-overflow");
-  }
+    function add(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        require((z = x + y) >= x, "ds-math-add-overflow");
+    }
 
-  uint constant WAD = 10 ** 18;
+    function mul(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        require(y == 0 || (z = x * y) / y == x, "ds-math-mul-overflow");
+    }
 
-  function wmul2(uint x, uint y) internal pure returns (uint z) {
-    z = mul(x, y) / WAD;
-  }
-  function wdiv2(uint x, uint y) internal pure returns (uint z) {
-    z = mul(x, WAD) / y;
-  }
+    uint256 constant WAD = 10**18;
+
+    function wmul2(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        z = mul(x, y) / WAD;
+    }
+
+    function wdiv2(uint256 x, uint256 y) internal pure returns (uint256 z) {
+        z = mul(x, WAD) / y;
+    }
 }

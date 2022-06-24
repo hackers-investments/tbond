@@ -1,28 +1,18 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.15;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-
-import {TBondFundManager} from "./TBondFundManager.sol";
+import {TBondManager} from "./TBondManager.sol";
 
 contract TBondFactory is Ownable {
-    mapping (bytes32 => address) public tokens;
+    uint256 private round;
+    mapping(uint256 => address) public bonds;
 
-    uint256 public round;
-
-    function create(address _registry)
-        onlyOwner
-        external
-    {
+    function create(address _registry) external onlyOwner {
         string memory name = string.concat("TBOND-", Strings.toString(++round));
-
-        bytes32 key = keccak256(abi.encodePacked(name));
-        require(tokens[key] == address(0), "TBondFactory:alredy exists");
-
-        address manager = address(new TBondFundManager(_registry, name));
-        TBondFundManager(manager).changeManager(_msgSender());
-
-        tokens[key] = manager;
+        TBondManager manager = new TBondManager(_registry, name);
+        manager.changeManager(_msgSender());
+        bonds[round] = address(manager);
     }
 }
