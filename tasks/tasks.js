@@ -1,3 +1,4 @@
+const { splitSignature } = require('ethers/lib/utils.js');
 const { task } = require('hardhat/config.js');
 
 require('./utils.js').imports();
@@ -5,6 +6,8 @@ require('./utils.js').imports();
 extendEnvironment((hre) => {
   hre.names = ['admin', 'user1', 'user2', 'user3', 'user4'];
 });
+
+task('test').setAction(async () => {});
 
 task('setup').setAction(async () => {
   const accounts = await ethers.getSigners();
@@ -43,26 +46,46 @@ task('balance').setAction(async () => {
 });
 
 task('deploy').setAction(async () => {
+  let factory = await get('factory');
   const accounts = await ethers.getSigners();
-  const factory = await (
-    await ethers.getContractFactory('TBondFactory', accounts[0])
-  ).deploy();
-  await factory.deployed();
-  log(factory.address);
-  // set('factory', factory.address);
-  // await factory.create(StakeRegistry);
-  // set('manager', await factory.bonds(1));
-  // const manager = await ethers.getContractAt(
-  //   'TBondManager',
-  //   get('manager'),
-  //   admin
-  // );
-  // await ton.connect(admin).approve(get('manager'), parseTon(10000));
-  // await manager.setup(100, 100, parseTon(10000));
-  // log(`[2] Setup Service`);
-  // log(`TBondFactory : ${get('factory')}`);
-  // log(`TBond-1 : ${get('manager')}`);
-  // log();
+  if (factory) {
+    factory = await ethers.getContractAt('TBondFactory', factory, accounts[0]);
+  } else {
+    factory = await (
+      await ethers.getContractFactory('TBondFactory', accounts[0])
+    ).deploy();
+    await factory.deployed();
+    set('factory', factory.address);
+  }
+  log(`Deploy Factory\nAddress : ${factory.address}`);
+});
+
+task('makebond').setAction(async () => {
+  //
+});
+
+task('listbond', async () => {
+  //
+});
+
+task('invest', async () => {
+  //
+});
+
+task('stake', async () => {
+  //
+});
+
+task('unstake', async () => {
+  //
+});
+
+task('withraw', async () => {
+  //
+});
+
+task('claim', async () => {
+  //
 });
 
 task('all').setAction(async () => {

@@ -17,8 +17,8 @@ const utils = {
   WTON: '0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2',
   SeigManager: '0x710936500ac59e8551331871cbad3d33d5e0d909',
   StakeRegistry: '0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367',
-  set: (k, v) => (hre.tbond = Object.assign(Object(hre.tbond), { [k]: v })),
-  get: (k) => hre.tbond[k],
+  // set: (k, v) => (hre.tbond = Object.assign(Object(hre.tbond), { [k]: v })),
+  // get: (k) => hre.tbond[k],
   key: (n) => ethers.utils.id(`TBOND-${n}`),
   log: (msg) => console.log(msg ? msg : ''),
   hex: (v) => `0x${v.toHexString().match(/(0x[0]*)([a-fA-F0-9]*)/)[2]}`,
@@ -43,6 +43,20 @@ const utils = {
     network.provider.send('hardhat_impersonateAccount', [addr]),
   stop_impersonate: (addr) =>
     network.provider.send('hardhat_stopImpersonatingAccount', [addr]),
+  set: (k, v) =>
+    network.provider.send('hardhat_setCode', [
+      ethers.utils.id(k).slice(0, 42),
+      `0x${Buffer.from(v).toString('hex')}`,
+    ]),
+  get: async (k) =>
+    Buffer.from(
+      (
+        await network.provider.send('eth_getCode', [
+          ethers.utils.id(k).slice(0, 42),
+        ])
+      ).slice(2),
+      'hex'
+    ).toString(),
 };
 
 module.exports = {
