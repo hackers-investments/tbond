@@ -78,15 +78,6 @@ contract TBondManager is Ownable, ERC20 {
         _;
     }
 
-    /// @notice 제3자가 커밋을 허용한 오퍼레이터인지 체크
-    modifier nonLayer2Candidate(address candidate) {
-        require(
-            ICandidate(candidate).isLayer2Candidate() == false,
-            "isLayer2Candidate"
-        );
-        _;
-    }
-
     /// @notice 새로운 채권의 설정 정보 초기화
     /// @param _fundraisingPeriod           펀드 모금 기간(블록 개수)
     /// @param _stakingPeriod               staking 기간(블록 개수)
