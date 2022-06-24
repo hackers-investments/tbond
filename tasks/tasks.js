@@ -1,6 +1,71 @@
+const { task } = require('hardhat/config.js');
+
 require('./utils.js').imports();
 
-task('rework').setAction(async () => {
+extendEnvironment((hre) => {
+  hre.names = ['admin', 'user1', 'user2', 'user3', 'user4'];
+});
+
+task('setup').setAction(async () => {
+  const accounts = await ethers.getSigners();
+  start_impersonate(WTON);
+  start_impersonate(SeigManager);
+  for (const addr of accounts.map((x) => x.address).concat([WTON, SeigManager]))
+    await setBalance(addr, 1000000);
+  const ton = new ethers.Contract(TON, ABI, await ethers.getSigner(WTON));
+  const wton = new ethers.Contract(
+    WTON,
+    ABI,
+    await ethers.getSigner(SeigManager)
+  );
+  for (const addr of accounts.map((x) => x.address)) {
+    await ton.mint(addr, parseTon(1000000));
+    await wton.mint(addr, parsewTon(1000000));
+  }
+});
+
+task('balance').setAction(async () => {
+  const accounts = await ethers.getSigners();
+  const ton = new ethers.Contract(TON, ABI, await ethers.getSigner(WTON));
+  const wton = new ethers.Contract(
+    WTON,
+    ABI,
+    await ethers.getSigner(SeigManager)
+  );
+  log('Account List');
+  for (let i = 0; i < 5; i++) {
+    let address = accounts[i].address;
+    log(`[${hre.names[i]}]`);
+    log(`ETH Balance:${fromEth(await getBalance(address))}`);
+    log(`TON Balance:${fromTon(await ton.balanceOf(address))}`);
+    log(`WTON Balance:${fromwTon(await wton.balanceOf(address))}`);
+  }
+});
+
+task('deploy').setAction(async () => {
+  const accounts = await ethers.getSigners();
+  const factory = await (
+    await ethers.getContractFactory('TBondFactory', accounts[0])
+  ).deploy();
+  await factory.deployed();
+  log(factory.address);
+  // set('factory', factory.address);
+  // await factory.create(StakeRegistry);
+  // set('manager', await factory.bonds(1));
+  // const manager = await ethers.getContractAt(
+  //   'TBondManager',
+  //   get('manager'),
+  //   admin
+  // );
+  // await ton.connect(admin).approve(get('manager'), parseTon(10000));
+  // await manager.setup(100, 100, parseTon(10000));
+  // log(`[2] Setup Service`);
+  // log(`TBondFactory : ${get('factory')}`);
+  // log(`TBond-1 : ${get('manager')}`);
+  // log();
+});
+
+task('all').setAction(async () => {
   // step 1 setup accounts
   start_impersonate(WTON);
   start_impersonate(SeigManager);
@@ -51,7 +116,7 @@ task('rework').setAction(async () => {
     admin
   );
   await ton.connect(admin).approve(get('manager'), parseTon(10000));
-  await manager.setup(LAYER2, 100, 100, parseTon(15000));
+  await manager.setup(100, 100, parseTon(10000), admin.address);
   log(`[2] Setup Service`);
   log(`TBondFactory : ${get('factory')}`);
   log(`TBond-1 : ${get('manager')}`);
@@ -59,10 +124,10 @@ task('rework').setAction(async () => {
 
   // // step 3 buy bond
   log(`[3] Buy Bond-1`);
-  await ton.connect(user1).approve(get('manager'), parseTon(1000));
-  await wton.connect(user1).approve(get('manager'), parsewTon(1000));
-  await manager.connect(user1).depositBoth(parseTon(1000), parsewTon(1000));
-  log(`user1 depositBoth(1000 ton, 1000 wton)`);
+  await ton.connect(user1).approve(get('manager'), parseTon(5000));
+  await wton.connect(user1).approve(get('manager'), parsewTon(5000));
+  await manager.connect(user1).depositBoth(parseTon(5000), parsewTon(5000));
+  log(`user1 depositBoth(5000 ton, 5000 wton)`);
   await ton.connect(user2).approve(get('manager'), parseTon(2000));
   await wton.connect(user2).approve(get('manager'), parsewTon(2000));
   await manager.connect(user2).depositTON(parseTon(2000));
@@ -99,4 +164,6 @@ task('rework').setAction(async () => {
   wtonBalance = fromwTon(await wton.balanceOf(get('manager')));
   log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`);
   log();
+  log(`incentive:${fromTon(await manager.incentive())}`);
+  log(`exchangeRate:${fromTon(await manager.exchangeRate())}`);
 });

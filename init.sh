@@ -1,4 +1,5 @@
 alias server='npx hardhat node'
+alias console='npx hardhat console'
 alias compile='npx hardhat compile'
-alias test='npx hardhat test $1 --network localhost'
 alias task='npx hardhat $1 --network localhost'
+alias test='npx hardhat test $1 --network localhost'

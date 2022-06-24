@@ -8,35 +8,30 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ITON} from "../interfaces/ITON.sol";
 import {IWTON} from "../interfaces/IWTON.sol";
 import {ICandidate} from "../interfaces/ICandidate.sol";
-import {ITokamakRegistry} from "../interfaces/ITokamakRegistry.sol";
 import {IDepositManager} from "../interfaces/IDepositManager.sol";
-import {DSMath} from "../libs/DSMath.sol";
+import {ITokamakRegistry} from "../interfaces/ITokamakRegistry.sol";
 
 /// @title TON/WTON 토큰을 모아서 스테이킹하고 리워드를 분배하는 채권 컨트랙트
 /// @author Jeongun Baek (blackcow@hackersinvestments.com)
 /// @dev [TODO] ERC20PresetMinterPauser 코드에서 필요없는 코드를 제거하고, 우리 필요한 기능만 넣어서 최적화하는 작업 필요
-contract TBondManager is Ownable, ERC20, DSMath {
+contract TBondManager is Ownable, ERC20 {
     using SafeERC20 for IERC20;
 
-    bytes32 private constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
-    uint256 public constant INITIAL_DEPOSIT = 10000 ether;
-    address private ton;
-    address private wton;
-    address private depositManager;
-    uint256 private exchangeRate = 1e18;
-    // @dev withdraw() method에서 staking 후 돌려받은 TON에 따라 교환 비율이 변경됨
-    address private layer2Operator;
-    uint256 private stakingPeriod;
+    address private immutable TON;
+    address private immutable WTON;
+    address private immutable DEPOSIT_MANAGER;
+    uint256 public constant INITIAL_DEPOSIT_TON = 1000e18;
+    // FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량(1000TON)
+    address public constant LAYER2OPERATOR =
+        0x5d9a0646c46245A8a3B4775aFB3c54d07BCB1764;
+    uint256 public exchangeRate = 1e18;
+    uint256 public incentive;
+    // withdraw() method에서 staking 후 돌려받은 TON에 따라 교환 비율이 변경됨
     uint256 private targetAmount;
-    uint256 private withdrawBlockNumber;
-    uint256 private fundraisingEndBlockNumber;
-    uint256 private stakingEndBlockNumber;
-
-    // FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량(10,000 TON)
-    uint256 private claimedTONAmount;
-    // 스테이킹이 끝난 뒤 컨트랙트에 쌓인 TON 토큰 수량
-    uint256 private issuedTbondAmount;
-    // 발행된 TBOND 토큰의 수량
+    uint256 private stakingPeriod;
+    uint256 private fundraisingEndBlock;
+    uint256 private withdrawBlock;
+    uint256 private stakingEndBlock;
     uint256 private operatorDeposit;
     // FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량
     address public incentiveTo;
@@ -51,30 +46,30 @@ contract TBondManager is Ownable, ERC20, DSMath {
     }
     FundStage private stage;
 
-    /// @param _registry    Tokamak Network의 정보가 저장된 컨트랙트(TONStarter의 StakeRegistry)
+    /// @param registry    Tokamak Network의 정보가 저장된 컨트랙트(TONStarter의 StakeRegistry)
     /// @param name         TBOND 토큰의 이름
-    constructor(address _registry, string memory name)
-        nonZeroAddress(_registry)
+    constructor(address registry, string memory name)
+        nonZeroAddress(registry)
         ERC20(name, "TBOND")
     {
-        (ton, wton, depositManager, , ) = ITokamakRegistry(_registry)
+        (TON, WTON, DEPOSIT_MANAGER, , ) = ITokamakRegistry(registry)
             .getTokamak();
 
         require(
-            ton != address(0) &&
-                wton != address(0) &&
-                depositManager != address(0),
+            TON != address(0) &&
+                WTON != address(0) &&
+                DEPOSIT_MANAGER != address(0),
             "tokamak network error"
         );
     }
 
-    modifier nonZero(uint256 _value) {
-        require(_value > 0, "no zero");
+    modifier nonZero(uint256 value) {
+        require(value > 0, "no zero");
         _;
     }
 
-    modifier nonZeroAddress(address _addr) {
-        require(_addr != address(0), "no zero address");
+    modifier nonZeroAddress(address addr) {
+        require(addr != address(0), "no zero address");
         _;
     }
 
@@ -92,34 +87,36 @@ contract TBondManager is Ownable, ERC20, DSMath {
         _;
     }
 
-    /// @notice 필수 변수 초기화, 관리자 지갑에서 minimumAmount 수량의 TON 토큰을 채권에 투자
-    /// @param _layer2Operator              펀드에 모인 자금을 staking할 오퍼레이터의 컨트랙트 주소, 제3자가 커밋할 수 있는 Candidate만 가능하며, layer2Candidate는 등록할 수 없음.
+    /// @notice 새로운 채권의 설정 정보 초기화
     /// @param _fundraisingPeriod           펀드 모금 기간(블록 개수)
     /// @param _stakingPeriod               staking 기간(블록 개수)
-    /// @param _targetAmount                staking을 시작할 수 있는 최소한의 TON 수량, 펀딩 기간 중에 TON 수량이 확보되지 않으면 claim() method를 통해 반환됨.
+    /// @param _targetAmount                펀드 모금 목표 금액(TON/WTON), 모금 실패 시 claim() method를 통해 반환 환급
     function setup(
-        address _layer2Operator,
         uint256 _fundraisingPeriod,
         uint256 _stakingPeriod,
-        uint256 _targetAmount
+        uint256 _targetAmount,
+        address _incentiveTo
     )
         external
         onlyOwner
         nonZero(_targetAmount)
         nonZero(_stakingPeriod)
         nonZero(_fundraisingPeriod)
-        nonZeroAddress(_layer2Operator)
-        nonLayer2Candidate(_layer2Operator)
+        nonZeroAddress(_incentiveTo)
     {
-        IERC20(ton).safeTransferFrom(owner(), address(this), INITIAL_DEPOSIT);
-        _mint(owner(), INITIAL_DEPOSIT);
+        IERC20(TON).safeTransferFrom(
+            owner(),
+            address(this),
+            INITIAL_DEPOSIT_TON
+        );
+        _mint(owner(), INITIAL_DEPOSIT_TON);
         // 채권 생성 시 관리자가 필수 참여하도록 설계
         // 관리자는 setup 호출 전 INITIAL_DEPOSIT 만큼 ton 토큰을 approve 해줘야 함
         stage = FundStage.FUNDRAISING;
-        layer2Operator = _layer2Operator;
-        fundraisingEndBlockNumber = block.number + _fundraisingPeriod;
         targetAmount = _targetAmount;
         stakingPeriod = _stakingPeriod;
+        fundraisingEndBlock = block.number + _fundraisingPeriod;
+        incentiveTo = _incentiveTo;
     }
 
     /// @notice 사용자 지갑에서 amount만큼 TON 토큰을 출금하고 TBOND 토큰 발행
@@ -129,7 +126,7 @@ contract TBondManager is Ownable, ERC20, DSMath {
         nonZero(amount)
         onlyRaisingStage
     {
-        IERC20(ton).safeTransferFrom(_msgSender(), address(this), amount);
+        IERC20(TON).safeTransferFrom(_msgSender(), address(this), amount);
         _mint(_msgSender(), amount);
     }
 
@@ -140,8 +137,8 @@ contract TBondManager is Ownable, ERC20, DSMath {
         nonZero(amount)
         onlyRaisingStage
     {
-        IERC20(wton).safeTransferFrom(_msgSender(), address(this), amount);
-        _mint(_msgSender(), _toWAD(amount));
+        IERC20(WTON).safeTransferFrom(_msgSender(), address(this), amount);
+        _mint(_msgSender(), toWAD(amount));
         // WTON은 RAY(1e27) decimal를 사용하기 때문에 WAD(1e18)로 변환해서 TBOND 발행
     }
 
@@ -154,9 +151,9 @@ contract TBondManager is Ownable, ERC20, DSMath {
         nonZero(amountWton)
         onlyRaisingStage
     {
-        IERC20(ton).safeTransferFrom(_msgSender(), address(this), amountTon);
-        IERC20(wton).safeTransferFrom(_msgSender(), address(this), amountWton);
-        _mint(_msgSender(), amountTon + _toWAD(amountWton));
+        IERC20(TON).safeTransferFrom(_msgSender(), address(this), amountTon);
+        IERC20(WTON).safeTransferFrom(_msgSender(), address(this), amountWton);
+        _mint(_msgSender(), amountTon + toWAD(amountWton));
         // WTON은 RAY(1e27) decimal를 사용하기 때문에 WAD(1e18)로 변환해서 TBOND 발행
     }
 
@@ -164,113 +161,91 @@ contract TBondManager is Ownable, ERC20, DSMath {
     /// @dev 펀딩된 TON 토큰 수량의 0.3%만큼의 TBOND를 추가 발행해서 인센티브로 지급
     function stake() external onlyRaisingStage {
         require(
-            block.number >= fundraisingEndBlockNumber,
+            block.number >= fundraisingEndBlock,
             "not reaching stakingable stage"
         );
 
-        uint256 wtonBalance = IERC20(wton).balanceOf(address(this));
-        uint256 tonBalance = IERC20(ton).balanceOf(address(this));
-        uint256 totalBalance = _toWAD(wtonBalance) + tonBalance;
+        uint256 tonBalance = IERC20(TON).balanceOf(address(this));
+        uint256 wtonBalance = IERC20(WTON).balanceOf(address(this));
+        uint256 totalBalance = toWAD(wtonBalance) + tonBalance;
 
         require(
             totalBalance >= targetAmount,
             "balance not reaching target amount"
         );
 
-        if (wtonBalance != 0) IWTON(wton).swapToTON(wtonBalance);
+        if (wtonBalance != 0) IWTON(WTON).swapToTON(wtonBalance);
         stage = FundStage.STAKING;
-        stakingEndBlockNumber = block.number + stakingPeriod;
+        stakingEndBlock = block.number + stakingPeriod;
 
-        // if (incentiveTo != address(0))
-        //     giveIncentive(totalBalance - INITIAL_DEPOSIT);
-        // 인센티브 TBOND 할당
-
-        issuedTbondAmount = totalSupply();
-
-        /// TONStarter의 contracts/connection/TokamakStaker.sol 컨트랙트 참고
-        /// 1) TON -> WTON swap
-        /// 2) DepositManager(plasma-evm-contracts/contracts/stake/managers/DepositManager.sol)의 onApprove method를 통해 staking
-        bytes memory data = abi.encode(depositManager, layer2Operator);
+        bytes memory data = abi.encode(DEPOSIT_MANAGER, LAYER2OPERATOR);
         require(
-            ITON(ton).approveAndCall(wton, totalBalance, data),
+            ITON(TON).approveAndCall(WTON, totalBalance, data),
             "approveAndCall fail"
         );
+        // TONStarter의 contracts/connection/TokamakStaker.sol 컨트랙트 참고
+        // 1) TON -> WTON swap
+        // 2) DepositManager(plasma-evm-contracts/contracts/stake/managers/DepositManager.sol)의 onApprove method를 통해 staking
     }
 
     /// @notice staking된 TON을 출금하기 위해 unstaking
     /// @dev staking 후 지정된 블록(stakingPeriod)이 지난 뒤 호출 가능
     function unstake() external {
         require(stage == FundStage.STAKING, "it's not staked");
+        require(stakingEndBlock <= block.number, "wait for staking period");
         require(
-            stakingEndBlockNumber <= block.number,
-            "wait for staking period"
-        );
-
-        require(
-            ICandidate(layer2Operator).updateSeigniorage(),
+            ICandidate(LAYER2OPERATOR).updateSeigniorage(),
             "updateSeigniorage"
-        );
-        // unstake를 하기 전에 commit하는 것을 통해 컨트랙트에 쌓인 시뇨리지 분배
-
+        ); // unstake를 하기 전에 commit하는 것을 통해 컨트랙트에 쌓인 시뇨리지 분배
         require(
-            IDepositManager(depositManager).requestWithdrawalAll(
-                layer2Operator
+            IDepositManager(DEPOSIT_MANAGER).requestWithdrawalAll(
+                LAYER2OPERATOR
             ),
             "requestWithdrawalAll"
         );
 
         stage = FundStage.UNSTAKING;
 
-        uint256 globalWithdrawalDelay = IDepositManager(depositManager)
-            .globalWithdrawalDelay();
-        uint256 localWithdrawalDelay = IDepositManager(depositManager)
-            .withdrawalDelay(layer2Operator);
-        uint256 delay = globalWithdrawalDelay > localWithdrawalDelay
-            ? globalWithdrawalDelay
-            : localWithdrawalDelay;
-        // https://github.com/Onther-Tech/plasma-evm-contracts의 contracts/stake/managers/DepositManager.sol를 참고해서 withdrawDelay 계산
-        // withdrawDelay가 변경되면 변경된 이후에 발생한 unstake부터 적용되므로 withdrawDelay 변경은 고려하지 않음
-        withdrawBlockNumber = block.number + delay;
+        withdrawBlock =
+            block.number +
+            IDepositManager(DEPOSIT_MANAGER).globalWithdrawalDelay();
     }
 
     /// @notice 스테이킹된 TON 토큰 출금
-    /// @dev unstaking 후 지정된 블록(withdrawDelay)이 지난 뒤 호출 가능
+    /// @dev unstaking 후 지정된 블록(globalWithdrawalDelay)이 지난 뒤 호출 가능
     function withdraw() external {
         require(stage == FundStage.UNSTAKING, "it's not unstaked");
-        require(withdrawBlockNumber <= block.number, "wait for withraw delay");
+        require(withdrawBlock <= block.number, "wait for withraw delay");
         require(
-            IDepositManager(depositManager).processRequest(
-                layer2Operator,
+            IDepositManager(DEPOSIT_MANAGER).processRequest(
+                LAYER2OPERATOR,
                 true
             ),
             "processRequest"
         );
         stage = FundStage.END;
-        claimedTONAmount = IERC20(ton).balanceOf(address(this));
-        exchangeRate = wdiv2(claimedTONAmount, issuedTbondAmount);
+        uint256 claimedAmount = IERC20(TON).balanceOf(address(this));
+        incentive = wdiv2(claimedAmount - totalSupply(), 2e19);
+        IERC20(TON).safeTransfer(incentiveTo, incentive);
+        exchangeRate = wdiv2(claimedAmount - incentive, totalSupply());
     }
 
     /// @notice amount만큼의 TBOND를 burn하고, TON 토큰 반환
     /// @dev 컨트랙트에 쌓인 TON 토큰의 balance가 0일 때는 claim에 실패하기 때문에 호출 전에 balance 확인 필수
     /// @param amount TBOND 토큰 수량
     function claim(uint256 amount) external nonZero(amount) {
-        // deposit된 TON/WTON을 스테이킹하기 전에는 exchangeRate가 1로 설정되어 있기 때문에 언제든지 환불 가능
-        // TON/WTON이 staking되면 컨트랙트의 balance가 0이기 때문에 트랜잭션이 실패함
-        // FundingStatus와 fundraisingEndBlockNumber에 접근하지 않으면 소모되는 gas가 약 6%정도 감소함
-
-        // FundingStatus _fundStatus = fundStatus;
-        // require(
-        //     _fundStatus == FundingStatus.END ||
-        //         (_fundStatus == FundingStatus.FUNDRAISING &&
-        //             block.number > fundraisingEndBlockNumber),
-        //     "FundManager:only be called in END or FUNDRAISING was failed");
-
-        // burnFrom() method를 사용하면 allowance를 처리하는 과정에서 많은 gas가 소모되기 때문에 _burn() method 사용
+        require(
+            stage == FundStage.END || stage == FundStage.FUNDRAISING,
+            "Non-claimable stage"
+        );
+        uint256 tonBalance = IERC20(TON).balanceOf(address(this));
+        uint256 wtonBalance = IERC20(WTON).balanceOf(address(this));
+        if (tonBalance < amount) IWTON(WTON).swapToTON(wtonBalance);
         _burn(_msgSender(), amount);
-        IERC20(ton).safeTransfer(_msgSender(), wmul2(amount, exchangeRate));
+        IERC20(TON).safeTransfer(_msgSender(), wmul2(amount, exchangeRate));
     }
 
-    /// @dev 인센티브를 지급한 지갑 주소 설정
+    /// @notice 인센티브를 지급한 지갑 주소 설정
     function setIncentiveTo(address _incentiveTo) external onlyOwner {
         incentiveTo = _incentiveTo;
     }
@@ -279,30 +254,34 @@ contract TBondManager is Ownable, ERC20, DSMath {
         transferOwnership(newOwner);
     }
 
-    /// @dev 오입금된 ERC20 토큰을 반환할 때 사용
-    /// @param token 오입금된 ERC20 토큰 주소
-    /// @param to 오입금된 ERC20 토큰을 돌려받을 주소
-    /// @param amount 전송할 ERC20 토큰의 양
-    /// @notice 관리자가 악용하는 것을 방지하기 위해 TON / WTON 전송은 제한됨
+    /// @notice 오입금된 토큰을 반환하는 인터페이스
+    /// @param token 오입금된 토큰 주소
+    /// @param to 오입금된 토큰을 돌려받을 주소
+    /// @param amount 전송할 토큰의 양
+    /// @dev 관리자가 악용하는 것을 방지하기 위해 TON / WTON 전송은 제한됨
     function emergencyRecoveryTransfer(
         address token,
         address to,
         uint256 amount
     ) external onlyOwner {
-        require(token != ton && token != wton);
+        require(token != TON && token != WTON);
         IERC20(token).safeTransfer(to, amount);
     }
 
-    /// @dev 0.3% TBOND 인센티브를지정된 지갑으로 전송
-    /// @param balance 펀딩된 TON 토큰 수량
-    function giveIncentive(uint256 balance) private {
-        uint256 incentiveAmount = (balance * (1000000 - 997000)) / 1000000;
-        // rounding error를 최소화하기 위해 1000000(1e6) 사용
-        _mint(incentiveTo, incentiveAmount);
+    /// @notice transform RAY(10e27) to WAD(10e18)
+    function toWAD(uint256 v) private pure returns (uint256) {
+        return v / 1e9;
     }
 
-    /// @dev transform RAY(10e27) to WAD(10e18)
-    function _toWAD(uint256 v) private pure returns (uint256) {
-        return v / 10**9;
+    function mul(uint256 x, uint256 y) private pure returns (uint256 z) {
+        require(y == 0 || (z = x * y) / y == x, "math-mul-overflow");
+    }
+
+    function wmul2(uint256 x, uint256 y) private pure returns (uint256 z) {
+        z = mul(x, y) / 1e18;
+    }
+
+    function wdiv2(uint256 x, uint256 y) private pure returns (uint256 z) {
+        z = mul(x, 1e18) / y;
     }
 }
