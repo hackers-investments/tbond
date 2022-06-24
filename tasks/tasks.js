@@ -1,18 +1,22 @@
-const { splitSignature } = require('ethers/lib/utils.js');
-const { task } = require('hardhat/config.js');
-
 require('./utils.js').imports();
 
 extendEnvironment((hre) => {
   hre.names = ['admin', 'user1', 'user2', 'user3', 'user4'];
 });
 
-task('test').setAction(async () => {});
+task('test1')
+  .addPositionalParam('a')
+  .setAction(async (arg) => {
+    log(arg);
+  });
+task('test2').setAction(async () => {
+  await run('test1', ['123']);
+});
 
-task('setup').setAction(async () => {
+task('money').setAction(async () => {
   const accounts = await ethers.getSigners();
-  start_impersonate(WTON);
-  start_impersonate(SeigManager);
+  await start_impersonate(WTON);
+  await start_impersonate(SeigManager);
   for (const addr of accounts.map((x) => x.address).concat([WTON, SeigManager]))
     await setBalance(addr, 1000000);
   const ton = new ethers.Contract(TON, ABI, await ethers.getSigner(WTON));
@@ -25,6 +29,10 @@ task('setup').setAction(async () => {
     await ton.mint(addr, parseTon(1000000));
     await wton.mint(addr, parsewTon(1000000));
   }
+  await stop_impersonate(WTON);
+  await stop_impersonate(SeigManager);
+  await set('money', 'on');
+  log('Done. everyone rich now except you!');
 });
 
 task('balance').setAction(async () => {
@@ -46,8 +54,9 @@ task('balance').setAction(async () => {
 });
 
 task('deploy').setAction(async () => {
-  let factory = await get('factory');
+  if ((await get('money')) != 'on') await run('money');
   const accounts = await ethers.getSigners();
+  let factory = await get('factory');
   if (factory) {
     factory = await ethers.getContractAt('TBondFactory', factory, accounts[0]);
   } else {
@@ -55,17 +64,57 @@ task('deploy').setAction(async () => {
       await ethers.getContractFactory('TBondFactory', accounts[0])
     ).deploy();
     await factory.deployed();
-    set('factory', factory.address);
+    await set('factory', factory.address);
+    log(`Factory Deployed @ ${factory.address}`);
   }
-  log(`Deploy Factory\nAddress : ${factory.address}`);
+  return factory;
 });
 
-task('makebond').setAction(async () => {
-  //
-});
+task('makebond')
+  .addPositionalParam('fundraisingPeriod')
+  .addPositionalParam('stakingPeriod')
+  .addPositionalParam('targetAmount')
+  .setAction(async (arg) => {
+    const accounts = await ethers.getSigners();
+    let bonds = await get('bonds');
+    if (bonds) bonds = JSON.parse(bonds);
+    else bonds = [];
+    let factory = await run('deploy');
+    await factory.create(StakeRegistry);
+    let bond = await factory.bonds(bonds.length + 1);
+    bonds.push(bond);
+    await set('bonds', JSON.stringify(bonds));
+    bond = await ethers.getContractAt('TBondManager', bond, accounts[0]);
+    const ton = new ethers.Contract(TON, ABI, accounts[0]);
+    await ton.approve(bond.address, parseTon(1000));
+    await bond.setup(
+      arg.fundraisingPeriod,
+      arg.stakingPeriod,
+      parseTon(arg.targetAmount),
+      accounts[0].address
+    );
+    log(`Bond Deployed @ ${bond.address} args...`);
+    return bond.address;
+  });
 
 task('listbond', async () => {
-  //
+  const accounts = await ethers.getSigners();
+  let bonds = await get('bonds');
+  if (bonds) bonds = JSON.parse(bonds);
+  else
+    bonds = [
+      await run('makebond', {
+        fundraisingPeriod: '100',
+        stakingPeriod: '100',
+        targetAmount: '10000',
+      }),
+    ];
+  for (const addr of bonds) {
+    const bond = await ethers.getContractAt('TBondManager', addr, accounts[0]);
+    // current block number
+    // bond end block number
+    // etc
+  }
 });
 
 task('invest', async () => {
