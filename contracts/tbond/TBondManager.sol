@@ -239,8 +239,11 @@ contract TBondManager is Ownable, ERC20 {
             "Non-claimable stage"
         );
         uint256 tonBalance = IERC20(TON).balanceOf(address(this));
-        uint256 wtonBalance = IERC20(WTON).balanceOf(address(this));
-        if (tonBalance < amount) IWTON(WTON).swapToTON(wtonBalance);
+        if (tonBalance < amount) {
+            IWTON(WTON).swapToTON(
+                IERC20(WTON).balanceOf(address(this))
+            );
+        }
         _burn(_msgSender(), amount);
         IERC20(TON).safeTransfer(_msgSender(), wmul2(amount, exchangeRate));
     }
