@@ -161,7 +161,6 @@ contract TBondManager is Ownable, ERC20 {
     }
 
     /// @notice 모금된 TON/WTON 토큰을 layer2 operator에게 staking
-    /// @dev 펀딩된 TON 토큰 수량의 0.3%만큼의 TBOND를 추가 발행해서 인센티브로 지급
     function stake() external onlyRaisingStage {
         require(
             block.number >= fundraisingEnd,
@@ -216,6 +215,7 @@ contract TBondManager is Ownable, ERC20 {
 
     /// @notice 스테이킹된 TON 토큰 출금
     /// @dev unstaking 후 지정된 블록(globalWithdrawalDelay)이 지난 뒤 호출 가능
+    /// @dev 2e19 => 스테이킹 이자의 5%
     function withdraw() external {
         require(stage == FundStage.UNSTAKING, "it's not unstaked");
         require(withdrawBlock <= block.number, "wait for withraw delay");
