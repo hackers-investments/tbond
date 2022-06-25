@@ -6,7 +6,7 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {TBondManager} from "./TBondManager.sol";
 
 contract TBondFactory is Ownable {
-    uint256 private round;
+    uint256 public round;
     mapping(uint256 => address) public bonds;
 
     function create(address _registry) external onlyOwner {

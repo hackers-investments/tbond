@@ -4,15 +4,6 @@ extendEnvironment((hre) => {
   hre.names = ['admin', 'user1', 'user2', 'user3', 'user4'];
 });
 
-task('test1')
-  .addPositionalParam('a')
-  .setAction(async (arg) => {
-    log(arg);
-  });
-task('test2').setAction(async () => {
-  await run('test1', ['123']);
-});
-
 task('money').setAction(async () => {
   const accounts = await ethers.getSigners();
   await start_impersonate(WTON);
@@ -70,50 +61,61 @@ task('deploy').setAction(async () => {
   return factory;
 });
 
-task('makebond')
+task('make')
   .addPositionalParam('fundraisingPeriod')
   .addPositionalParam('stakingPeriod')
   .addPositionalParam('targetAmount')
   .setAction(async (arg) => {
     const accounts = await ethers.getSigners();
-    let bonds = await get('bonds');
-    if (bonds) bonds = JSON.parse(bonds);
-    else bonds = [];
-    let factory = await run('deploy');
+    const factory = await run('deploy');
     await factory.create(StakeRegistry);
-    let bond = await factory.bonds(bonds.length + 1);
-    bonds.push(bond);
-    await set('bonds', JSON.stringify(bonds));
-    bond = await ethers.getContractAt('TBondManager', bond, accounts[0]);
+    const round = await factory.round();
+    const addr = await factory.bonds(round);
+    const bond = await ethers.getContractAt('TBondManager', addr, accounts[0]);
     const ton = new ethers.Contract(TON, ABI, accounts[0]);
-    await ton.approve(bond.address, parseTon(1000));
+    await ton.approve(addr, parseTon(1000));
     await bond.setup(
       arg.fundraisingPeriod,
       arg.stakingPeriod,
       parseTon(arg.targetAmount),
       accounts[0].address
     );
-    log(`Bond Deployed @ ${bond.address} args...`);
-    return bond.address;
+    log(`Bond Deployed @ ${addr}`);
+    return addr;
   });
 
-task('listbond', async () => {
-  const accounts = await ethers.getSigners();
-  let bonds = await get('bonds');
-  if (bonds) bonds = JSON.parse(bonds);
-  else
-    bonds = [
-      await run('makebond', {
-        fundraisingPeriod: '100',
-        stakingPeriod: '100',
-        targetAmount: '10000',
-      }),
-    ];
-  for (const addr of bonds) {
-    const bond = await ethers.getContractAt('TBondManager', addr, accounts[0]);
-    // current block number
-    // bond end block number
-    // etc
+task('list', async () => {
+  const factory = await run('deploy');
+  const round = (await factory.round()).toNumber();
+  if (!round)
+    await run('make', {
+      fundraisingPeriod: '100',
+      stakingPeriod: '100',
+      targetAmount: '10000',
+    });
+  log('Bond List');
+  log(`Block Now: ${await ethers.provider.getBlockNumber()}`);
+  for (let i = 1; i <= round; i++) {
+    const addr = await factory.bonds(i);
+    const bond = await ethers.getContractAt('TBondManager', addr);
+    log(`[${await bond.name()}]`);
+    log(`Address: ${addr}`);
+    const [targetAmount, fundraisingEnd, stakingEnd, withdrawBlock] =
+      await bond.info();
+    log(
+      `Stage: ${
+        ['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][
+          Number.parseInt(await bond.stage())
+        ]
+      }`
+    );
+    log(
+      `Amount: ${fromTon(await bond.totalSupply())} / ${fromTon(targetAmount)}`
+    );
+    log(`Fundraising End: ${fundraisingEnd}`);
+    log(`Staking End: ${stakingEnd}`);
+    log(`withdrawBlock: ${withdrawBlock}`);
+    if (i != round) log('='.repeat(51));
   }
 });
 
