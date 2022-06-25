@@ -90,41 +90,46 @@ task('make')
       accounts[0].address
     );
     log(`Bond Deployed @ ${addr}`);
+    await run('list');
     return addr;
   });
 
 task('list', async () => {
   const factory = await run('deploy');
   const round = (await factory.round()).toNumber();
-  if (!round)
+  if (round) {
+    log('Bond List');
+    log(`Block Now: ${await ethers.provider.getBlockNumber()}`);
+    for (let i = 1; i <= round; i++) {
+      const addr = await factory.bonds(i);
+      const bond = await ethers.getContractAt('TBondManager', addr);
+      log(`[${await bond.name()}]`);
+      log(`Address: ${addr}`);
+      const [targetAmount, fundraisingEnd, stakingEnd, withdrawBlock] =
+        await bond.info();
+      log(
+        `Stage: ${
+          ['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][
+            Number.parseInt(await bond.stage())
+          ]
+        }`
+      );
+      log(
+        `Amount: ${fromTon(await bond.totalSupply())} / ${fromTon(
+          targetAmount
+        )}`
+      );
+      log(`Fundraising End: ${fundraisingEnd}`);
+      log(`Staking End: ${stakingEnd}`);
+      log(`withdrawBlock: ${withdrawBlock}`);
+      if (i != round) log('='.repeat(51));
+    }
+  } else {
     await run('make', {
       fundraisingPeriod: '100',
       stakingPeriod: '100',
       targetAmount: '10000',
     });
-  log('Bond List');
-  log(`Block Now: ${await ethers.provider.getBlockNumber()}`);
-  for (let i = 1; i <= round; i++) {
-    const addr = await factory.bonds(i);
-    const bond = await ethers.getContractAt('TBondManager', addr);
-    log(`[${await bond.name()}]`);
-    log(`Address: ${addr}`);
-    const [targetAmount, fundraisingEnd, stakingEnd, withdrawBlock] =
-      await bond.info();
-    log(
-      `Stage: ${
-        ['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][
-          Number.parseInt(await bond.stage())
-        ]
-      }`
-    );
-    log(
-      `Amount: ${fromTon(await bond.totalSupply())} / ${fromTon(targetAmount)}`
-    );
-    log(`Fundraising End: ${fundraisingEnd}`);
-    log(`Staking End: ${stakingEnd}`);
-    log(`withdrawBlock: ${withdrawBlock}`);
-    if (i != round) log('='.repeat(51));
   }
 });
 
