@@ -58,6 +58,9 @@ const utils = {
       ).slice(2),
       'hex'
     ).toString(),
+  snapshot: () => network.provider.send('evm_snapshot', []),
+  revert: (n) => network.provider.send('evm_revert', [n]),
+  reset: () => network.provider.send('hardhat_reset', []),
 };
 
 module.exports = {

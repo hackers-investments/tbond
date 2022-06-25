@@ -2,6 +2,15 @@ require('./utils.js').imports();
 
 extendEnvironment((hre) => {
   hre.names = ['admin', 'user1', 'user2', 'user3', 'user4'];
+  hre.snapshotlist = (snapshotData) => {
+    if (Object.keys(snapshotData).length) {
+      log('Snapshot List');
+      for (let name of Object.keys(snapshotData)) {
+        log(`Name: ${name}`);
+        log(`BlockNumber: ${snapshotData[name].block}`);
+      }
+    }
+  };
 });
 
 task('money').setAction(async () => {
@@ -119,25 +128,75 @@ task('list', async () => {
   }
 });
 
-task('invest', async () => {
-  //
-});
+task('invest')
+  .addPositionalParam('user')
+  .addPositionalParam('bond')
+  .addPositionalParam('amount')
+  .setAction(async () => {
+    //
+  });
 
-task('stake', async () => {
-  //
-});
+task('stake')
+  .addPositionalParam('user')
+  .addPositionalParam('bond')
+  .setAction(async () => {
+    //
+  });
 
-task('unstake', async () => {
-  //
-});
+task('unstake')
+  .addPositionalParam('user')
+  .addPositionalParam('bond')
+  .setAction(async () => {
+    //
+  });
 
-task('withraw', async () => {
-  //
-});
+task('withraw')
+  .addPositionalParam('user')
+  .addPositionalParam('bond')
+  .setAction(async () => {
+    //
+  });
 
-task('claim', async () => {
-  //
-});
+task('claim')
+  .addPositionalParam('user')
+  .addPositionalParam('bond')
+  .addPositionalParam('amount')
+  .setAction(async () => {
+    //
+  });
+
+task('save')
+  .addPositionalParam('name')
+  .setAction(async (arg) => {
+    let snapshotData = await get('snapshot');
+    if (snapshotData) snapshotData = JSON.parse(snapshotData);
+    else snapshotData = {};
+    if (Object.keys(snapshotData).includes(arg.name)) {
+      log('Wake! - Name conflicts');
+      return;
+    }
+    snapshotData[arg.name] = {
+      block: await ethers.provider.getBlockNumber(),
+      number: await snapshot(),
+    };
+    await set('snapshot', JSON.stringify(snapshotData));
+    hre.snapshotlist(snapshotData);
+  });
+
+task('load')
+  .addPositionalParam('name')
+  .setAction(async (arg) => {
+    let snapshotData = await get('snapshot');
+    if (Object.keys(snapshotData).includes(arg.name)) {
+      const result = await revert(snapshotData[arg.name].number);
+      if (result) {
+        log('Snapshot revert success');
+        delete snapshotData[arg.name];
+        await set('snapshot', JSON.stringify(snapshotData));
+      } else log('Snapshot revert fail');
+    } else log('Snapshot not found');
+    hre.snapshotlist(snapshotData);
+  });
 
 task('all').setAction(async () => {
   // step 1 setup accounts
