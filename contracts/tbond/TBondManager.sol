@@ -238,15 +238,28 @@ contract TBondManager is Ownable, ERC20 {
     /// @param amount TBOND 토큰 수량
     function claim(uint256 amount) external nonZero(amount) {
         require(
-            stage == FundStage.END || stage == FundStage.FUNDRAISING,
+            stage == FundStage.END,
             "Non-claimable stage"
         );
+
+        _burn(_msgSender(), amount);
+        IERC20(TON).safeTransfer(_msgSender(), wmul2(amount, exchangeRate));
+    }
+
+    /// @notice amount만큼의 TBOND를 burn하고, TON 토큰 반환, 펀드 모금 단계에서 투자를 취소할 때 사용하는 함수
+    /// @param amount TBOND 토큰 수량
+    function refund(uint256 amount)
+        external
+        nonZero(amount)
+        onlyRaisingStage
+    {
         uint256 tonBalance = IERC20(TON).balanceOf(address(this));
         if (tonBalance < amount) {
             IWTON(WTON).swapToTON(IERC20(WTON).balanceOf(address(this)));
         }
+        
         _burn(_msgSender(), amount);
-        IERC20(TON).safeTransfer(_msgSender(), wmul2(amount, exchangeRate));
+        IERC20(TON).safeTransfer(_msgSender(), amount);
     }
 
     /// @notice 인센티브를 지급한 지갑 주소 설정
