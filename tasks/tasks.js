@@ -28,6 +28,11 @@ extendEnvironment((hre) => {
   };
 });
 
+task('test').setAction(async () => {
+  var bond = await hre.getBond('1');
+  log(await bond.result());
+});
+
 task('money').setAction(async () => {
   const accounts = await ethers.getSigners();
   await start_impersonate(WTON);

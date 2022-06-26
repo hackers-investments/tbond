@@ -108,20 +108,6 @@ contract TBondManager is Ownable, ERC20 {
         incentiveTo = _incentiveTo;
     }
 
-    /// @notice 채권의 상태 정보 반환
-    function info()
-        external
-        view
-        returns (
-            uint256,
-            uint256,
-            uint256,
-            uint256
-        )
-    {
-        return (targetAmount, stakable, unstakeable, withdrawable);
-    }
-
     /// @notice 사용자 지갑에서 amount만큼 TON 토큰을 출금하고 TBOND 토큰 발행
     /// @param amount TON 토큰 수량 / 수량 만큼 approve 필수
     function depositTON(uint256 amount)
@@ -274,6 +260,25 @@ contract TBondManager is Ownable, ERC20 {
     ) external onlyOwner {
         require(token != TON && token != WTON);
         IERC20(token).safeTransfer(to, amount);
+    }
+
+    /// @notice 채권의 상태 정보 반환
+    function info()
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return (targetAmount, stakable, unstakeable, withdrawable);
+    }
+
+    function bondBalanceOf() external view returns (uint256) {
+        require(stage == FundStage.END, "not withdrawn");
+        return wmul2(balanceOf(_msgSender()), exchangeRate);
     }
 
     /// @notice transform RAY(10e27) to WAD(10e18)
