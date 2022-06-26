@@ -254,9 +254,10 @@ task('load')
   });
 
 task('mine')
-  .addPositionalParam('exp')
+  .addOptionalPositionalParam('exp')
   .setAction(async (args) => {
-    const number = eval(args.exp);
+    var number = 10000;
+    if (args.exp) number = eval(args.exp);
     await mining(eval(number));
     log(`Mining ${number} Blocks`);
     await run('list');
