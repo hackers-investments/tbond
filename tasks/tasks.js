@@ -119,7 +119,7 @@ task('view')
     const stage = Number.parseInt(await bond.stage());
     if (args.now) log(`Block Now: ${await now()}`);
     log(`[${await bond.name()}]`);
-    const [targetAmount, fundraisingEnd, unstakeable, withdrawable] =
+    const [targetAmount, stakable, unstakeable, withdrawable] =
       await bond.info();
     log(
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
@@ -127,7 +127,7 @@ task('view')
     log(
       `Amount: ${fromTon(await bond.totalSupply())} / ${fromTon(targetAmount)}`
     );
-    log(`Fundraising End: ${fundraisingEnd}`);
+    log(`Fundraising End: ${stakable}`);
     log(`Unstakeable: ${unstakeable}`);
     log(`Withdrawable: ${withdrawable}`);
   });
@@ -203,7 +203,7 @@ task('stage')
     if (args.mode == 'stake')
       await bond.stake((overrides = { gasLimit: 10000000 }));
     if (args.mode == 'unstake') await bond.unstake();
-    if (args.mode == 'withraw') await bond.withdraw();
+    if (args.mode == 'withdraw') await bond.withdraw();
     await run('view', { number: args.bond, now: 'on' });
   });
 
@@ -259,6 +259,7 @@ task('mine')
     const number = eval(args.exp);
     await mining(eval(number));
     log(`Mining ${number} Blocks`);
+    await run('list');
   });
 
 task('now').setAction(async () => {
