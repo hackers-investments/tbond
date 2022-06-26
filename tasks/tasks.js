@@ -88,11 +88,6 @@ task('make')
   .addPositionalParam('stakingPeriod')
   .addPositionalParam('targetAmount')
   .setAction(async (args) => {
-    if (args.fundraisingPeriod == 'help') {
-      log('make fundraisingPeriod stakingPeriod targetAmount');
-      log('ex) make 100 100 10000');
-      return;
-    }
     const accounts = await ethers.getSigners();
     const factory = await run('deploy');
     await factory.create(StakeRegistry);
@@ -115,6 +110,7 @@ task('make')
 task('view')
   .addPositionalParam('number')
   .setAction(async (args) => {
+    const ton = await hre.getContract(TON, ethers.provider);
     const bond = await hre.getBond(args.number);
     const stage = Number.parseInt(await bond.stage());
     if (args.now) log(`Block Now: ${await now()}`);
@@ -125,9 +121,11 @@ task('view')
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
     );
     log(
-      `Amount: ${fromTon(await bond.totalSupply())} / ${fromTon(targetAmount)}`
+      `Amount: ${fromTon(await ton.balanceOf(bond.address))} / ${fromTon(
+        targetAmount
+      )}`
     );
-    log(`Fundraising End: ${stakable}`);
+    log(`Stakable: ${stakable}`);
     log(`Unstakeable: ${unstakeable}`);
     log(`Withdrawable: ${withdrawable}`);
   });
@@ -144,9 +142,9 @@ task('list').setAction(async () => {
     }
   } else {
     await run('make', {
-      fundraisingPeriod: '100',
-      stakingPeriod: '100',
-      targetAmount: '10000',
+      fundraisingPeriod: '10000',
+      stakingPeriod: '10000',
+      targetAmount: '1000',
     });
   }
 });
@@ -156,12 +154,6 @@ task('invest')
   .addPositionalParam('amount')
   .addPositionalParam('user')
   .setAction(async (args) => {
-    if (args.bond == 'help') {
-      log('invest bond amount user');
-      log('ex) invest 1 1000ton user1');
-      log('ex) invest 1 100/200 user1');
-      return;
-    }
     let tonamount, wtonamount;
     if (args.amount.includes('/')) {
       [tonamount, wtonamount] = args.amount.split('/');
