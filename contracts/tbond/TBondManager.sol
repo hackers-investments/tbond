@@ -29,7 +29,7 @@ contract TBondManager is Ownable, ERC20 {
     uint256 private targetAmount;
     uint256 private stakingPeriod;
     uint256 private withdrawable;
-    uint256 private stakeable;
+    uint256 private unstakeable;
     uint256 private fundraisingEnd;
     // FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량
     address private incentiveTo;
@@ -119,7 +119,7 @@ contract TBondManager is Ownable, ERC20 {
             uint256
         )
     {
-        return (targetAmount, fundraisingEnd, stakeable, withdrawable);
+        return (targetAmount, fundraisingEnd, unstakeable, withdrawable);
     }
 
     /// @notice 사용자 지갑에서 amount만큼 TON 토큰을 출금하고 TBOND 토큰 발행
@@ -178,7 +178,7 @@ contract TBondManager is Ownable, ERC20 {
 
         if (wtonBalance != 0) IWTON(WTON).swapToTON(wtonBalance);
         stage = FundStage.STAKING;
-        stakeable = block.number + stakingPeriod;
+        unstakeable = block.number + stakingPeriod;
 
         bytes memory data = abi.encode(DEPOSIT_MANAGER, LAYER2OPERATOR);
         require(
@@ -194,7 +194,7 @@ contract TBondManager is Ownable, ERC20 {
     /// @dev staking 후 지정된 블록(stakingPeriod)이 지난 뒤 호출 가능
     function unstake() external {
         require(stage == FundStage.STAKING, "it's not staked");
-        require(stakeable <= block.number, "wait for staking period");
+        require(unstakeable <= block.number, "wait for staking period");
         require(
             ICandidate(LAYER2OPERATOR).updateSeigniorage(),
             "updateSeigniorage"

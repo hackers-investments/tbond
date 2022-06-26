@@ -119,7 +119,7 @@ task('view')
     const stage = Number.parseInt(await bond.stage());
     if (args.now) log(`Block Now: ${await now()}`);
     log(`[${await bond.name()}]`);
-    const [targetAmount, fundraisingEnd, stakeable, withdrawable] =
+    const [targetAmount, fundraisingEnd, unstakeable, withdrawable] =
       await bond.info();
     log(
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
@@ -128,7 +128,7 @@ task('view')
       `Amount: ${fromTon(await bond.totalSupply())} / ${fromTon(targetAmount)}`
     );
     log(`Fundraising End: ${fundraisingEnd}`);
-    log(`Stakeable: ${stakeable}`);
+    log(`Unstakeable: ${unstakeable}`);
     log(`Withdrawable: ${withdrawable}`);
   });
 
