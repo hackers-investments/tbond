@@ -60,9 +60,9 @@ task('balance')
     for (let i = 0; i < users.length; i++) {
       let address = accounts[i].address;
       log(`[${users[i]}]`);
-      log(`ETH Balance:${fromEth(await getBalance(address))}`);
-      log(`TON Balance:${fromTon(await ton.balanceOf(address))}`);
-      log(`WTON Balance:${fromwTon(await wton.balanceOf(address))}`);
+      log(`ETH Balance: ${fromEth(await getBalance(address))}`);
+      log(`TON Balance: ${fromTon(await ton.balanceOf(address))}`);
+      log(`WTON Balance: ${fromwTon(await wton.balanceOf(address))}`);
     }
   });
 
@@ -109,6 +109,7 @@ task('make')
 
 task('view')
   .addPositionalParam('number')
+  .addOptionalPositionalParam('user')
   .setAction(async (args) => {
     const ton = await hre.getContract(TON, ethers.provider);
     const bond = await hre.getBond(args.number);
@@ -128,6 +129,12 @@ task('view')
     log(`Stakable: ${stakable}`);
     log(`Unstakeable: ${unstakeable}`);
     log(`Withdrawable: ${withdrawable}`);
+    if (args.user) {
+      const user = await hre.getUser(args.user);
+      log(
+        `TBOND-${args.number} Balance: ${await bond.balanceOf(user.address)}`
+      );
+    }
   });
 
 task('list').setAction(async () => {
@@ -258,5 +265,3 @@ task('mine')
 task('now').setAction(async () => {
   log(`Block Now: ${await now()}`);
 });
-
-task('all').setAction(async () => {});
