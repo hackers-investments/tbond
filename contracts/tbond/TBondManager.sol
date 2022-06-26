@@ -28,8 +28,8 @@ contract TBondManager is Ownable, ERC20 {
     // withdraw() method에서 staking 후 돌려받은 TON에 따라 교환 비율이 변경됨
     uint256 private targetAmount;
     uint256 private stakingPeriod;
-    uint256 private withdrawBlock;
-    uint256 private stakingEnd;
+    uint256 private withdrawable;
+    uint256 private stakeable;
     uint256 private fundraisingEnd;
     // FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량
     address private incentiveTo;
@@ -119,7 +119,7 @@ contract TBondManager is Ownable, ERC20 {
             uint256
         )
     {
-        return (targetAmount, fundraisingEnd, stakingEnd, withdrawBlock);
+        return (targetAmount, fundraisingEnd, stakeable, withdrawable);
     }
 
     /// @notice 사용자 지갑에서 amount만큼 TON 토큰을 출금하고 TBOND 토큰 발행
@@ -178,7 +178,7 @@ contract TBondManager is Ownable, ERC20 {
 
         if (wtonBalance != 0) IWTON(WTON).swapToTON(wtonBalance);
         stage = FundStage.STAKING;
-        stakingEnd = block.number + stakingPeriod;
+        stakeable = block.number + stakingPeriod;
 
         bytes memory data = abi.encode(DEPOSIT_MANAGER, LAYER2OPERATOR);
         require(
@@ -194,7 +194,7 @@ contract TBondManager is Ownable, ERC20 {
     /// @dev staking 후 지정된 블록(stakingPeriod)이 지난 뒤 호출 가능
     function unstake() external {
         require(stage == FundStage.STAKING, "it's not staked");
-        require(stakingEnd <= block.number, "wait for staking period");
+        require(stakeable <= block.number, "wait for staking period");
         require(
             ICandidate(LAYER2OPERATOR).updateSeigniorage(),
             "updateSeigniorage"
@@ -208,7 +208,7 @@ contract TBondManager is Ownable, ERC20 {
 
         stage = FundStage.UNSTAKING;
 
-        withdrawBlock =
+        withdrawable =
             block.number +
             IDepositManager(DEPOSIT_MANAGER).globalWithdrawalDelay();
     }
@@ -218,7 +218,7 @@ contract TBondManager is Ownable, ERC20 {
     /// @dev 2e19 => 스테이킹 이자의 5%
     function withdraw() external {
         require(stage == FundStage.UNSTAKING, "it's not unstaked");
-        require(withdrawBlock <= block.number, "wait for withraw delay");
+        require(withdrawable <= block.number, "wait for withraw delay");
         require(
             IDepositManager(DEPOSIT_MANAGER).processRequest(
                 LAYER2OPERATOR,
@@ -237,27 +237,18 @@ contract TBondManager is Ownable, ERC20 {
     /// @dev 컨트랙트에 쌓인 TON 토큰의 balance가 0일 때는 claim에 실패하기 때문에 호출 전에 balance 확인 필수
     /// @param amount TBOND 토큰 수량
     function claim(uint256 amount) external nonZero(amount) {
-        require(
-            stage == FundStage.END,
-            "Non-claimable stage"
-        );
-
+        require(stage == FundStage.END, "Non-claimable stage");
         _burn(_msgSender(), amount);
         IERC20(TON).safeTransfer(_msgSender(), wmul2(amount, exchangeRate));
     }
 
     /// @notice amount만큼의 TBOND를 burn하고, TON 토큰 반환, 펀드 모금 단계에서 투자를 취소할 때 사용하는 함수
     /// @param amount TBOND 토큰 수량
-    function refund(uint256 amount)
-        external
-        nonZero(amount)
-        onlyRaisingStage
-    {
+    function refund(uint256 amount) external nonZero(amount) onlyRaisingStage {
         uint256 tonBalance = IERC20(TON).balanceOf(address(this));
         if (tonBalance < amount) {
             IWTON(WTON).swapToTON(IERC20(WTON).balanceOf(address(this)));
         }
-        
         _burn(_msgSender(), amount);
         IERC20(TON).safeTransfer(_msgSender(), amount);
     }

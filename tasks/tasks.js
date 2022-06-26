@@ -1,7 +1,7 @@
 require('./utils.js').imports();
 
 extendEnvironment((hre) => {
-  hre.names = ['admin', 'user1', 'user2', 'user3', 'user4'];
+  hre.users = ['admin', 'user1', 'user2', 'user3', 'user4'];
   hre.snapshotlist = (snapshotData) => {
     if (Object.keys(snapshotData).length) {
       log('Snapshot List');
@@ -11,6 +11,21 @@ extendEnvironment((hre) => {
       }
     }
   };
+  hre.getContract = async (addr, signer) => {
+    if (typeof signer == 'string') signer = await ethers.getSigner(signer);
+    return await new ethers.Contract(addr, ABI, signer);
+  };
+  hre.getBond = async (number, signer) => {
+    const factory = await run('deploy');
+    const addr = await factory.bonds(number);
+    return await ethers.getContractAt('TBondManager', addr, signer);
+  };
+  hre.getUser = async (user) => {
+    const accounts = await ethers.getSigners();
+    const index = hre.users.indexOf(user);
+    if (index == -1) return accounts[parseInt(user)];
+    else return accounts[index];
+  };
 });
 
 task('money').setAction(async () => {
@@ -19,12 +34,8 @@ task('money').setAction(async () => {
   await start_impersonate(SeigManager);
   for (const addr of accounts.map((x) => x.address).concat([WTON, SeigManager]))
     await setBalance(addr, 1000000);
-  const ton = new ethers.Contract(TON, ABI, await ethers.getSigner(WTON));
-  const wton = new ethers.Contract(
-    WTON,
-    ABI,
-    await ethers.getSigner(SeigManager)
-  );
+  const ton = await hre.getContract(TON, WTON);
+  const wton = await hre.getContract(WTON, SeigManager);
   for (const addr of accounts.map((x) => x.address)) {
     await ton.mint(addr, parseTon(1000000));
     await wton.mint(addr, parsewTon(1000000));
@@ -35,31 +46,33 @@ task('money').setAction(async () => {
   log('Done. everyone rich now except you!');
 });
 
-task('balance').setAction(async () => {
-  const accounts = await ethers.getSigners();
-  const ton = new ethers.Contract(TON, ABI, await ethers.getSigner(WTON));
-  const wton = new ethers.Contract(
-    WTON,
-    ABI,
-    await ethers.getSigner(SeigManager)
-  );
-  log('Account List');
-  for (let i = 0; i < 5; i++) {
-    let address = accounts[i].address;
-    log(`[${hre.names[i]}]`);
-    log(`ETH Balance:${fromEth(await getBalance(address))}`);
-    log(`TON Balance:${fromTon(await ton.balanceOf(address))}`);
-    log(`WTON Balance:${fromwTon(await wton.balanceOf(address))}`);
-  }
-});
+task('balance')
+  .addOptionalPositionalParam('user')
+  .setAction(async (args) => {
+    var users = [args.user];
+    var accounts = await ethers.getSigners();
+    const index = hre.users.indexOf(args.user);
+    if (index == -1) users = hre.users;
+    else accounts = [accounts[index]];
+    const ton = await hre.getContract(TON, ethers.provider);
+    const wton = await hre.getContract(WTON, ethers.provider);
+    log('Account List');
+    for (let i = 0; i < users.length; i++) {
+      let address = accounts[i].address;
+      log(`[${users[i]}]`);
+      log(`ETH Balance:${fromEth(await getBalance(address))}`);
+      log(`TON Balance:${fromTon(await ton.balanceOf(address))}`);
+      log(`WTON Balance:${fromwTon(await wton.balanceOf(address))}`);
+    }
+  });
 
 task('deploy').setAction(async () => {
   if ((await get('money')) != 'on') await run('money');
   const accounts = await ethers.getSigners();
   let factory = await get('factory');
-  if (factory) {
+  if (factory)
     factory = await ethers.getContractAt('TBondFactory', factory, accounts[0]);
-  } else {
+  else {
     factory = await (
       await ethers.getContractFactory('TBondFactory', accounts[0])
     ).deploy();
@@ -74,19 +87,24 @@ task('make')
   .addPositionalParam('fundraisingPeriod')
   .addPositionalParam('stakingPeriod')
   .addPositionalParam('targetAmount')
-  .setAction(async (arg) => {
+  .setAction(async (args) => {
+    if (args.fundraisingPeriod == 'help') {
+      log('make fundraisingPeriod stakingPeriod targetAmount');
+      log('ex) make 100 100 10000');
+      return;
+    }
     const accounts = await ethers.getSigners();
     const factory = await run('deploy');
     await factory.create(StakeRegistry);
     const round = await factory.round();
     const addr = await factory.bonds(round);
-    const bond = await ethers.getContractAt('TBondManager', addr, accounts[0]);
-    const ton = new ethers.Contract(TON, ABI, accounts[0]);
+    const bond = await hre.getBond(round, accounts[0]);
+    const ton = await hre.getContract(TON, accounts[0]);
     await ton.approve(addr, parseTon(1000));
     await bond.setup(
-      arg.fundraisingPeriod,
-      arg.stakingPeriod,
-      parseTon(arg.targetAmount),
+      args.fundraisingPeriod,
+      args.stakingPeriod,
+      parseTon(args.targetAmount),
       accounts[0].address
     );
     log(`Bond Deployed @ ${addr}`);
@@ -94,34 +112,34 @@ task('make')
     return addr;
   });
 
-task('list', async () => {
+task('view')
+  .addPositionalParam('number')
+  .setAction(async (args) => {
+    const bond = await hre.getBond(args.number);
+    const stage = Number.parseInt(await bond.stage());
+    if (args.now) log(`Block Now: ${await now()}`);
+    log(`[${await bond.name()}]`);
+    const [targetAmount, fundraisingEnd, stakeable, withdrawable] =
+      await bond.info();
+    log(
+      `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
+    );
+    log(
+      `Amount: ${fromTon(await bond.totalSupply())} / ${fromTon(targetAmount)}`
+    );
+    log(`Fundraising End: ${fundraisingEnd}`);
+    log(`Stakeable: ${stakeable}`);
+    log(`Withdrawable: ${withdrawable}`);
+  });
+
+task('list').setAction(async () => {
   const factory = await run('deploy');
   const round = (await factory.round()).toNumber();
   if (round) {
     log('Bond List');
-    log(`Block Now: ${await ethers.provider.getBlockNumber()}`);
+    log(`Block Now: ${await now()}`);
     for (let i = 1; i <= round; i++) {
-      const addr = await factory.bonds(i);
-      const bond = await ethers.getContractAt('TBondManager', addr);
-      log(`[${await bond.name()}]`);
-      log(`Address: ${addr}`);
-      const [targetAmount, fundraisingEnd, stakingEnd, withdrawBlock] =
-        await bond.info();
-      log(
-        `Stage: ${
-          ['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][
-            Number.parseInt(await bond.stage())
-          ]
-        }`
-      );
-      log(
-        `Amount: ${fromTon(await bond.totalSupply())} / ${fromTon(
-          targetAmount
-        )}`
-      );
-      log(`Fundraising End: ${fundraisingEnd}`);
-      log(`Staking End: ${stakingEnd}`);
-      log(`withdrawBlock: ${withdrawBlock}`);
+      await run('view', { number: i.toString() });
       if (i != round) log('='.repeat(51));
     }
   } else {
@@ -134,53 +152,85 @@ task('list', async () => {
 });
 
 task('invest')
-  .addPositionalParam('user')
   .addPositionalParam('bond')
   .addPositionalParam('amount')
-  .setAction(async () => {
-    //
+  .addPositionalParam('user')
+  .setAction(async (args) => {
+    if (args.bond == 'help') {
+      log('invest bond amount user');
+      log('ex) invest 1 1000ton user1');
+      log('ex) invest 1 100/200 user1');
+      return;
+    }
+    let tonamount, wtonamount;
+    if (args.amount.includes('/')) {
+      [tonamount, wtonamount] = args.amount.split('/');
+      tonamount = parseTon(tonamount);
+      wtonamount = parsewTon(wtonamount);
+    } else if (args.amount.endsWith('wton'))
+      wtonamount = parsewTon(args.amount.slice(0, -4));
+    else if (args.amount.endsWith('ton'))
+      tonamount = parseTon(args.amount.slice(0, -3));
+    else tonamount = parseTon(args.amount);
+    const user = await hre.getUser(args.user);
+    const bond = await hre.getBond(args.bond, user);
+    const ton = await hre.getContract(TON, user);
+    const wton = await hre.getContract(WTON, user);
+    if (tonamount && wtonamount) {
+      await ton.approve(bond.address, tonamount);
+      await wton.approve(bond.address, wtonamount);
+      await bond.depositBoth(tonamount, wtonamount);
+    }
+    if (tonamount && !wtonamount) {
+      await ton.approve(bond.address, tonamount);
+      await bond.depositTON(tonamount);
+    }
+    if (!tonamount && wtonamount) {
+      await wton.approve(bond.address, wtonamount);
+      await bond.depositWTON(wtonamount);
+    }
+    await run('view', { number: args.bond, now: 'on' });
   });
 
-task('stake')
-  .addPositionalParam('user')
+task('stage')
+  .addPositionalParam('mode')
   .addPositionalParam('bond')
-  .setAction(async () => {
-    //
-  });
-
-task('unstake')
-  .addPositionalParam('user')
-  .addPositionalParam('bond')
-  .setAction(async () => {
-    //
-  });
-
-task('withraw')
-  .addPositionalParam('user')
-  .addPositionalParam('bond')
-  .setAction(async () => {
-    //
+  .addOptionalPositionalParam('user')
+  .setAction(async (args) => {
+    let user = await hre.getUser('admin');
+    if (args.user) user = await hre.getUser(args.user);
+    const bond = await hre.getBond(args.bond, user);
+    if (args.mode == 'stake')
+      await bond.stake((overrides = { gasLimit: 10000000 }));
+    if (args.mode == 'unstake') await bond.unstake();
+    if (args.mode == 'withraw') await bond.withdraw();
+    await run('view', { number: args.bond, now: 'on' });
   });
 
 task('claim')
-  .addPositionalParam('user')
+  .addPositionalParam('mode')
   .addPositionalParam('bond')
   .addPositionalParam('amount')
-  .setAction(async () => {
-    //
+  .addPositionalParam('user')
+  .setAction(async (args) => {
+    const user = await hre.getUser(args.user);
+    const bond = await hre.getBond(args.bond, user);
+    if (args.mode == 'claim') await bond.claim(parseTon(args.amount));
+    if (args.mode == 'refund') await bond.refund(parseTon(args.amount));
+    await run('view', { number: args.bond, now: 'on' });
   });
 
 task('save')
   .addPositionalParam('name')
-  .setAction(async (arg) => {
+  .setAction(async (args) => {
     let snapshotData = await get('snapshot');
     if (snapshotData) snapshotData = JSON.parse(snapshotData);
     else snapshotData = {};
-    if (Object.keys(snapshotData).includes(arg.name)) {
+    if (Object.keys(snapshotData).includes(args.name)) {
       log('Wake! - Name conflicts');
       return;
     }
-    snapshotData[arg.name] = {
+    snapshotData[args.name] = {
       block: await ethers.provider.getBlockNumber(),
       number: await snapshot(),
     };
@@ -190,118 +240,29 @@ task('save')
 
 task('load')
   .addPositionalParam('name')
-  .setAction(async (arg) => {
+  .setAction(async (args) => {
     let snapshotData = await get('snapshot');
-    if (Object.keys(snapshotData).includes(arg.name)) {
-      const result = await revert(snapshotData[arg.name].number);
+    if (Object.keys(snapshotData).includes(args.name)) {
+      const result = await revert(snapshotData[args.name].number);
       if (result) {
         log('Snapshot revert success');
-        delete snapshotData[arg.name];
+        delete snapshotData[args.name];
         await set('snapshot', JSON.stringify(snapshotData));
       } else log('Snapshot revert fail');
     } else log('Snapshot not found');
     hre.snapshotlist(snapshotData);
   });
 
-task('all').setAction(async () => {
-  // step 1 setup accounts
-  start_impersonate(WTON);
-  start_impersonate(SeigManager);
-  const [admin, user1, user2] = await ethers.getSigners();
-  await network.provider.send('hardhat_setBalance', [
-    WTON,
-    hex(parseEth(10000)),
-  ]);
-  await network.provider.send('hardhat_setBalance', [
-    SeigManager,
-    hex(parseEth(10000)),
-  ]);
-  const ton = new ethers.Contract(TON, ABI, await ethers.getSigner(WTON));
-  const wton = new ethers.Contract(
-    WTON,
-    ABI,
-    await ethers.getSigner(SeigManager)
-  );
-  await ton.mint(admin.address, parseTon(1000000));
-  await ton.mint(user1.address, parseTon(1000000));
-  await ton.mint(user2.address, parseTon(1000000));
-  await wton.mint(admin.address, parsewTon(1000000));
-  await wton.mint(user1.address, parsewTon(1000000));
-  await wton.mint(user2.address, parsewTon(1000000));
-  log(`[1] Setup Accounts`);
-  log(`admin`);
-  log(`ton balance:${fromTon(await ton.balanceOf(admin.address))}`);
-  log(`wton balance:${fromwTon(await wton.balanceOf(admin.address))}`);
-  log(`user1`);
-  log(`ton balance:${fromTon(await ton.balanceOf(user1.address))}`);
-  log(`wton balance:${fromwTon(await wton.balanceOf(user1.address))}`);
-  log(`user2`);
-  log(`ton balance:${fromTon(await ton.balanceOf(user2.address))}`);
-  log(`wton balance:${fromwTon(await wton.balanceOf(user2.address))}`);
-  log();
+task('mine')
+  .addPositionalParam('exp')
+  .setAction(async (args) => {
+    const number = eval(args.exp);
+    await mining(eval(number));
+    log(`Mining ${number} Blocks`);
+  });
 
-  // // step 2 setup service
-  const factory = await (
-    await ethers.getContractFactory('TBondFactory', admin)
-  ).deploy();
-  await factory.deployed();
-  set('factory', factory.address);
-  await factory.create(StakeRegistry);
-  set('manager', await factory.bonds(1));
-  const manager = await ethers.getContractAt(
-    'TBondManager',
-    get('manager'),
-    admin
-  );
-  await ton.connect(admin).approve(get('manager'), parseTon(10000));
-  await manager.setup(100, 100, parseTon(10000), admin.address);
-  log(`[2] Setup Service`);
-  log(`TBondFactory : ${get('factory')}`);
-  log(`TBond-1 : ${get('manager')}`);
-  log();
-
-  // // step 3 buy bond
-  log(`[3] Buy Bond-1`);
-  await ton.connect(user1).approve(get('manager'), parseTon(5000));
-  await wton.connect(user1).approve(get('manager'), parsewTon(5000));
-  await manager.connect(user1).depositBoth(parseTon(5000), parsewTon(5000));
-  log(`user1 depositBoth(5000 ton, 5000 wton)`);
-  await ton.connect(user2).approve(get('manager'), parseTon(2000));
-  await wton.connect(user2).approve(get('manager'), parsewTon(2000));
-  await manager.connect(user2).depositTON(parseTon(2000));
-  await manager.connect(user2).depositWTON(parsewTon(2000));
-  log(`user2 depositTON(2000 ton)`);
-  log(`user2 depositWTON(2000 wton)`);
-  log(`user1`);
-  log(`ton balance:${fromTon(await ton.balanceOf(user1.address))}`);
-  log(`wton balance:${fromwTon(await wton.balanceOf(user1.address))}`);
-  log(`user2`);
-  log(`ton balance:${fromTon(await ton.balanceOf(user2.address))}`);
-  log(`wton balance:${fromwTon(await wton.balanceOf(user2.address))}`);
-  let tonBalance = fromTon(await ton.balanceOf(get('manager')));
-  let wtonBalance = fromwTon(await wton.balanceOf(get('manager')));
-  log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`);
-  log();
-
-  // // step 4 stake
-  log(`[4] Stake TBOND-1`);
-  mining(100);
-  await manager.stake((overrides = { gasLimit: 10000000 }));
-  tonBalance = fromTon(await ton.balanceOf(get('manager')));
-  wtonBalance = fromwTon(await wton.balanceOf(get('manager')));
-  log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`);
-  log();
-
-  // // step 5 unstake
-  log(`[5] Unstake & Withraw TBOND-1`);
-  mining(100);
-  await manager.unstake();
-  mining(0x16b76);
-  await manager.withdraw();
-  tonBalance = fromTon(await ton.balanceOf(get('manager')));
-  wtonBalance = fromwTon(await wton.balanceOf(get('manager')));
-  log(`TBOND-1 balance:${sum(tonBalance, wtonBalance)}`);
-  log();
-  log(`incentive:${fromTon(await manager.incentive())}`);
-  log(`exchangeRate:${fromTon(await manager.exchangeRate())}`);
+task('now').setAction(async () => {
+  log(`Block Now: ${await now()}`);
 });
+
+task('all').setAction(async () => {});
