@@ -11,7 +11,7 @@ money : 계정에 돈 넣기 (admin, user1, user2, user3, user4 계정이 있음
 balance [user] : 계정 계좌 확인  
 deploy : TBondFactory 배포  
 make fundraisingPeriod stakingPeriod targetAmount : 채권 생성 ex) make 100 100 10000  
-view [bond] : 채권 정보 조회  
+view [bond] [user] : 채권 정보 조회  
 list : 채권 전부 출력  
 invest bond amount user : 채권에 투자 ex) invest 1 1000 user1  
 stake bond : 채권 스테이킹  
