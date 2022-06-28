@@ -19,7 +19,6 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
     address private immutable WTON;
     address private immutable FACTORY;
     mapping(address => uint256) public nonces;
-    bytes private constant SIGN_PREFIX = "\x19Ethereum Signed Message:\n";
     bytes32 private constant ORDER_TYPEHASH =
         keccak256(
             "Order(address owner,uint256 bond,uint256 bondAmount,uint256 wtonAmount,uint256 nonce,uint256 deadline)"
@@ -57,12 +56,12 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
                 makerOrder.nonce == nonces[makerOrder.owner] &&
                 takerOrder.nonce == nonces[takerOrder.owner] &&
                 _msgSender() == takerOrder.owner,
-            "Invalid Order"
+            "Invalid order"
         );
         address bond = IFactory(FACTORY).bonds(makerOrder.bond);
         require(bond != address(0), "Bond not found");
         address signer = signOrder(makerOrder).recover(signature);
-        require(signer != makerOrder.owner, "invalid signature");
+        require(signer != makerOrder.owner, "Invalid signature");
         require(block.timestamp > makerOrder.deadline, "Order expired");
         IERC20(bond).safeTransferFrom(
             signer,

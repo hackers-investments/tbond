@@ -104,7 +104,9 @@ contract Bond is Ownable, ERC20 {
         stage = FundStage.FUNDRAISING;
         targetAmount = _targetAmount;
         stakingPeriod = _stakingPeriod;
-        stakable = block.number + _fundraisingPeriod;
+        unchecked {
+            stakable = block.number + _fundraisingPeriod;
+        }
         incentiveTo = _incentiveTo;
     }
 
@@ -142,7 +144,9 @@ contract Bond is Ownable, ERC20 {
     {
         IERC20(TON).safeTransferFrom(_msgSender(), address(this), amountTon);
         IERC20(WTON).safeTransferFrom(_msgSender(), address(this), amountWton);
-        _mint(_msgSender(), amountTon + toWAD(amountWton));
+        unchecked {
+            _mint(_msgSender(), amountTon + toWAD(amountWton));
+        }
         // WTON은 RAY(1e27) decimal를 사용하기 때문에 WAD(1e18)로 변환해서 TBOND 발행
     }
 
@@ -152,22 +156,21 @@ contract Bond is Ownable, ERC20 {
 
         uint256 tonBalance = IERC20(TON).balanceOf(address(this));
         uint256 wtonBalance = IERC20(WTON).balanceOf(address(this));
-        uint256 totalBalance = toWAD(wtonBalance) + tonBalance;
-
-        require(
-            totalBalance >= targetAmount,
-            "balance not reaching target amount"
-        );
-
-        if (wtonBalance != 0) IWTON(WTON).swapToTON(wtonBalance);
-        stage = FundStage.STAKING;
-        unstakeable = block.number + stakingPeriod;
-
-        bytes memory data = abi.encode(DEPOSIT_MANAGER, LAYER2OPERATOR);
-        require(
-            ITON(TON).approveAndCall(WTON, totalBalance, data),
-            "approveAndCall fail"
-        );
+        unchecked {
+            uint256 totalBalance = toWAD(wtonBalance) + tonBalance;
+            require(
+                totalBalance >= targetAmount,
+                "balance not reaching target amount"
+            );
+            if (wtonBalance != 0) IWTON(WTON).swapToTON(wtonBalance);
+            stage = FundStage.STAKING;
+            unstakeable = block.number + stakingPeriod;
+            bytes memory data = abi.encode(DEPOSIT_MANAGER, LAYER2OPERATOR);
+            require(
+                ITON(TON).approveAndCall(WTON, totalBalance, data),
+                "approveAndCall fail"
+            );
+        }
         // TONStarter의 contracts/connection/TokamakStaker.sol 컨트랙트 참고
         // 1) TON -> WTON swap
         // 2) DepositManager(plasma-evm-contracts/contracts/stake/managers/DepositManager.sol)의 onApprove method를 통해 staking
@@ -188,12 +191,12 @@ contract Bond is Ownable, ERC20 {
             ),
             "requestWithdrawalAll"
         );
-
         stage = FundStage.UNSTAKING;
-
-        withdrawable =
-            block.number +
-            IDepositManager(DEPOSIT_MANAGER).globalWithdrawalDelay();
+        unchecked {
+            withdrawable =
+                block.number +
+                IDepositManager(DEPOSIT_MANAGER).globalWithdrawalDelay();
+        }
     }
 
     /// @notice 스테이킹된 TON 토큰 출금
@@ -214,9 +217,11 @@ contract Bond is Ownable, ERC20 {
         );
         stage = FundStage.END;
         uint256 claimedAmount = IERC20(TON).balanceOf(address(this));
-        uint256 incentive = wdiv2(claimedAmount - totalSupply(), 2e19);
-        IERC20(TON).safeTransfer(incentiveTo, incentive);
-        exchangeRate = wdiv2(claimedAmount - incentive, totalSupply());
+        unchecked {
+            uint256 incentive = wdiv2(claimedAmount - totalSupply(), 2e19);
+            IERC20(TON).safeTransfer(incentiveTo, incentive);
+            exchangeRate = wdiv2(claimedAmount - incentive, totalSupply());
+        }
     }
 
     /// @notice amount만큼의 TBOND를 burn하고, TON 토큰 반환
