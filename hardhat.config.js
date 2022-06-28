@@ -2,8 +2,8 @@ require('@nomiclabs/hardhat-waffle');
 require('@nomiclabs/hardhat-solhint');
 require('hardhat-gas-reporter');
 require('dotenv').config();
-require('./tasks/bond');
-require('./tasks/exchange');
+require('./task/bond');
+require('./task/exchange');
 
 module.exports = {
   networks: {

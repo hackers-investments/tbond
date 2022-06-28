@@ -38,12 +38,12 @@ contract EIP712 {
     }
 }
 
-interface ITBondFactory {
+interface IFactory {
     function bonds(uint256) external view returns (address);
 }
 
 /// @title TBond 채권 거래소 컨트랙트
-contract TBondExchange is Ownable, EIP712 {
+contract Exchange is Ownable, EIP712 {
     using SafeERC20 for IERC20;
 
     address private wton;
@@ -138,7 +138,7 @@ contract TBondExchange is Ownable, EIP712 {
             (bytes, bytes)
         );
         // TBondFactory를 통해 makerOrder(판매자가 등록한 주문)의 token이 정상적으로 발행된 TBOND인지 확인
-        address bond = ITBondFactory(factory).bonds(makerOrder.bond);
+        address bond = IFactory(factory).bonds(makerOrder.bond);
         require(bond != address(0));
         require(makerOrder.bond == takerOrder.bond, "Invalide bond");
         require(
@@ -181,10 +181,7 @@ contract TBondExchange is Ownable, EIP712 {
     }
 
     /// @notice 사용자에게 할당된 nonce 값 업데이트
-    // nonce는 sign을 재사용하는 문제를 해결하기 위해 존재함.
-    // 토큰의 거래 가격을 낮추는 경우엔 문제가 없지만, (이 경우 어뷰저가 오히려 높은 가격에 매수하기 때문에...)
-    // 가격을 높이게 되면 이전에 낮게 설정한 주문 데이터와 sign을 재사용할 수 있기 때문에 nonce를 업데이트 해야함.
-    // NOTE: 주문을 취소하거나, 가격을 높게 변경할 때는 **무조건** updateNonce()를 통해 nonce 값을 변경해야함.
+    /// @dev 주문 취소, 가격 변경 시 nonce 값 변경 필수
     function updateNonce() private {
         unchecked {
             nonces[_msgSender()]++;

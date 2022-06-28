@@ -3,9 +3,9 @@ pragma solidity ^0.8.15;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
-import {TBondManager} from "./TBondManager.sol";
+import {Bond} from "./Bond.sol";
 
-contract TBondFactory is Ownable {
+contract Factory is Ownable {
     uint256 public round;
     mapping(uint256 => address) public bonds;
 
@@ -15,9 +15,9 @@ contract TBondFactory is Ownable {
                 "TBOND-",
                 Strings.toString(++round)
             );
-            TBondManager manager = new TBondManager(_registry, name);
-            manager.changeManager(_msgSender());
-            bonds[round] = address(manager);
+            Bond bond = new Bond(_registry, name);
+            bond.transferOwnership(_msgSender());
+            bonds[round] = address(bond);
         }
     }
 }

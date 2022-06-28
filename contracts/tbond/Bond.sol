@@ -14,7 +14,7 @@ import {ITokamakRegistry} from "../interfaces/ITokamakRegistry.sol";
 /// @title TON/WTON 토큰을 모아서 스테이킹하고 리워드를 분배하는 채권 컨트랙트
 /// @author Jeongun Baek (blackcow@hackersinvestments.com)
 /// @dev [TODO] ERC20PresetMinterPauser 코드에서 필요없는 코드를 제거하고, 우리 필요한 기능만 넣어서 최적화하는 작업 필요
-contract TBondManager is Ownable, ERC20 {
+contract Bond is Ownable, ERC20 {
     using SafeERC20 for IERC20;
     address private immutable TON;
     address private immutable WTON;
@@ -24,7 +24,6 @@ contract TBondManager is Ownable, ERC20 {
     address private constant LAYER2OPERATOR =
         0x5d9a0646c46245A8a3B4775aFB3c54d07BCB1764;
     uint256 private exchangeRate = 1e18;
-    uint256 private incentive;
     // withdraw() method에서 staking 후 돌려받은 TON에 따라 교환 비율이 변경됨
     uint256 private targetAmount;
     uint256 private stakingPeriod;
@@ -214,7 +213,7 @@ contract TBondManager is Ownable, ERC20 {
         );
         stage = FundStage.END;
         uint256 claimedAmount = IERC20(TON).balanceOf(address(this));
-        incentive = wdiv2(claimedAmount - totalSupply(), 2e19);
+        uint256 incentive = wdiv2(claimedAmount - totalSupply(), 2e19);
         IERC20(TON).safeTransfer(incentiveTo, incentive);
         exchangeRate = wdiv2(claimedAmount - incentive, totalSupply());
     }
@@ -242,10 +241,6 @@ contract TBondManager is Ownable, ERC20 {
     /// @notice 인센티브를 지급한 지갑 주소 설정
     function setIncentiveTo(address _incentiveTo) external onlyOwner {
         incentiveTo = _incentiveTo;
-    }
-
-    function changeManager(address newOwner) external onlyOwner {
-        transferOwnership(newOwner);
     }
 
     /// @notice 오입금된 토큰을 반환하는 인터페이스

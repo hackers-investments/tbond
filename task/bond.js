@@ -18,7 +18,7 @@ extendEnvironment((hre) => {
   hre.getBond = async (number, signer) => {
     const factory = await run('deploy');
     const addr = await factory.bonds(number);
-    return await ethers.getContractAt('TBondManager', addr, signer);
+    return await ethers.getContractAt('Bond', addr, signer);
   };
   hre.getUser = async (user) => {
     const accounts = await ethers.getSigners();
@@ -71,10 +71,10 @@ task('deploy').setAction(async () => {
   const accounts = await ethers.getSigners();
   let factory = await get('factory');
   if (factory)
-    factory = await ethers.getContractAt('TBondFactory', factory, accounts[0]);
+    factory = await ethers.getContractAt('Factory', factory, accounts[0]);
   else {
     factory = await (
-      await ethers.getContractFactory('TBondFactory', accounts[0])
+      await ethers.getContractFactory('Factory', accounts[0])
     ).deploy();
     await factory.deployed();
     await set('factory', factory.address);
