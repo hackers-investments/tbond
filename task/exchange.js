@@ -1,7 +1,19 @@
 require('../utils.js').imports();
 
-extendEnvironment((hre) => {});
+task('sell')
+  .addPositionalParam('bond')
+  .addPositionalParam('bondAmount')
+  .addPositionalParam('wtonAmount')
+  .addPositionalParam('user')
+  .setAction(async () => {
+    //
+  });
 
-task('adsds').setAction(async () => {
-  //
-});
+task('buy')
+  .addPositionalParam('bond')
+  .addPositionalParam('bondAmount')
+  .addPositionalParam('wtonAmount')
+  .addPositionalParam('user')
+  .setAction(async () => {
+    //
+  });

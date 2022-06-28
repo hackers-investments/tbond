@@ -13,6 +13,7 @@ interface IFactory {
 
 /// @title TBond 채권 거래소
 contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
+    using ECDSA for bytes32;
     using SafeERC20 for IERC20;
 
     address private immutable WTON;
@@ -48,18 +49,19 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
         bytes calldata signature
     ) external {
         require(
-            makerOrder.bond == takerOrder.bond &&
+            makerOrder.owner != takerOrder.owner &&
+                makerOrder.bond == takerOrder.bond &&
                 makerOrder.bondAmount == takerOrder.bondAmount &&
                 makerOrder.wtonAmount == takerOrder.wtonAmount &&
                 makerOrder.deadline == takerOrder.deadline &&
                 makerOrder.nonce == nonces[makerOrder.owner] &&
                 takerOrder.nonce == nonces[takerOrder.owner] &&
                 _msgSender() == takerOrder.owner,
-            "Invalide Order"
+            "Invalid Order"
         );
         address bond = IFactory(FACTORY).bonds(makerOrder.bond);
         require(bond != address(0), "Bond not found");
-        address signer = ECDSA.recover(signOrder(makerOrder), signature);
+        address signer = signOrder(makerOrder).recover(signature);
         require(signer != makerOrder.owner, "invalid signature");
         require(block.timestamp > makerOrder.deadline, "Order expired");
         IERC20(bond).safeTransferFrom(
@@ -77,16 +79,6 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
         }
     }
 
-    /// @notice 주문 데이터 검증
-    /// @param order 주문
-    /// @param owner 매도자
-    /// @param signature 서명
-    function validateOrder(
-        Order memory order,
-        address owner,
-        bytes memory signature
-    ) private view {}
-
     /// @notice 사용자에게 할당된 nonce 값 업데이트
     /// @dev 주문 취소, 가격 변경 시 nonce 값 변경 필수
     function updateNonce() private {
@@ -95,6 +87,7 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
         }
     }
 
+    /// @notice 주문 정보를 사인
     function signOrder(Order memory order) private view returns (bytes32) {
         return
             _hashTypedDataV4(
