@@ -18,6 +18,7 @@ const utils = {
   WTON: '0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2',
   SeigManager: '0x710936500ac59e8551331871cbad3d33d5e0d909',
   StakeRegistry: '0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367',
+  users: ['admin', 'user1', 'user2', 'user3', 'user4'],
   key: (n) => ethers.utils.id(`TBOND-${n}`),
   log: (msg) => console.log(msg ? msg : ''),
   hex: (v) => `0x${v.toHexString().match(/(0x[0]*)([a-fA-F0-9]*)/)[2]}`,
@@ -60,6 +61,30 @@ const utils = {
   revert: (n) => network.provider.send('evm_revert', [n]),
   reset: () => network.provider.send('hardhat_reset', []),
   now: () => ethers.provider.getBlockNumber(),
+  snapshotlist: (snapshotData) => {
+    if (Object.keys(snapshotData).length) {
+      log('Snapshot List');
+      for (let name of Object.keys(snapshotData)) {
+        log(`Name: ${name}`);
+        log(`BlockNumber: ${snapshotData[name].block}`);
+      }
+    }
+  },
+  getContract: async (addr, signer) => {
+    if (typeof signer == 'string') signer = await ethers.getSigner(signer);
+    return await new ethers.Contract(addr, ABI, signer);
+  },
+  getBond: async (number, signer) => {
+    const factory = await run('deploy');
+    const addr = await factory.bonds(number);
+    return await ethers.getContractAt('Bond', addr, signer);
+  },
+  getUser: async (user, acc) => {
+    const accounts = acc ? acc : await ethers.getSigners();
+    const index = ['admin', 'user1', 'user2', 'user3', 'user4'].indexOf(user);
+    if (index == -1) return accounts[parseInt(user)];
+    else return accounts[index];
+  },
 };
 
 module.exports = {
