@@ -111,11 +111,12 @@ contract Bond is Ownable, ERC20, OnApprove {
         }
     }
 
-    /// @notice TON / WTON을 approveAndCall 할 때 호출되는 콜백
-    /// @param sender approveAndCall를 호출한 사용자 주소
-    /// @param spender approveAndCall의 대상 주소(TBOND)
-    /// @param amount TON / WTON 토큰의 수
-    /// @param data TON / WTON을 함께 approve 할 때 WTON 토큰의 수
+    /// @notice 사용자의 지갑에서 TON / WTON을 출금하고 TBOND 발행
+    /// @dev TON / WTON의 approveAndCallback에 의해 호출되는 함수
+    /// @param sender 사용자 지갑 주소
+    /// @param spender TBOND 주소
+    /// @param amount TON 또는 WTON 토큰 총량(onApprove를 호출한 컨트랙트에 따라 달라짐)
+    /// @param data TON / WTON을 함께 approve 할 때 WTON 토큰 총량(WTON은 미리 approve 해야함)
     function onApprove(
         address sender,
         address spender,
