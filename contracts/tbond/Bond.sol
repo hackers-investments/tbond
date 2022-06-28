@@ -10,11 +10,13 @@ import {IWTON} from "../interfaces/IWTON.sol";
 import {ICandidate} from "../interfaces/ICandidate.sol";
 import {IDepositManager} from "../interfaces/IDepositManager.sol";
 import {ITokamakRegistry} from "../interfaces/ITokamakRegistry.sol";
+import {OnApprove} from "./OnApprove.sol";
+
 
 /// @title TON/WTON 토큰을 모아서 스테이킹하고 리워드를 분배하는 채권 컨트랙트
 /// @author Jeongun Baek (blackcow@hackersinvestments.com)
 /// @dev [TODO] ERC20PresetMinterPauser 코드에서 필요없는 코드를 제거하고, 우리 필요한 기능만 넣어서 최적화하는 작업 필요
-contract Bond is Ownable, ERC20 {
+contract Bond is Ownable, ERC20, OnApprove {
     using SafeERC20 for IERC20;
     address private immutable TON;
     address private immutable WTON;
@@ -108,6 +110,40 @@ contract Bond is Ownable, ERC20 {
             stakable = block.number + _fundraisingPeriod;
             incentiveTo = _incentiveTo;
         }
+    }
+
+    /// @notice TON / WTON을 approveAndCall 할 때 호출되는 콜백
+    /// @param sender approveAndCall를 호출한 사용자 주소
+    /// @param spender approveAndCall의 대상 주소(TBOND)
+    /// @param amount TON / WTON 토큰의 수
+    /// @param data TON / WTON을 함께 approve 할 때 WTON 토큰의 수
+    function onApprove(
+        address sender,
+        address spender,
+        uint256 amount,
+        bytes calldata data
+    ) external override onlyRaisingStage returns (bool) {
+        require(
+            _msgSender() == TON || _msgSender() == WTON,
+            "sender is not TON or WTON");
+
+        if (_msgSender() == TON) {
+            uint256 amountWton = _decodeApproveData(data);
+            IERC20(TON).safeTransferFrom(sender, address(this), amount);
+            if (amountWton > 0) {
+                IERC20(WTON).safeTransferFrom(sender, address(this), amountWton);    
+                _mint(sender, toWAD(amountWton) + amount);
+            }
+            else {
+                _mint(sender, amount);
+            }
+        }
+        else { // _msgSender() == WTON
+            IERC20(WTON).safeTransferFrom(sender, address(this), amount);
+            _mint(sender, toWAD(amount));
+        }
+        
+        return true;
     }
 
     /// @notice 사용자 지갑에서 amount만큼 TON 토큰을 출금하고 TBOND 토큰 발행
@@ -234,7 +270,12 @@ contract Bond is Ownable, ERC20 {
 
     /// @notice amount만큼의 TBOND를 burn하고, TON 토큰 반환, 펀드 모금 단계에서 투자를 취소할 때 사용하는 함수
     /// @param amount TBOND 토큰 수량
-    function refund(uint256 amount) external nonZero(amount) onlyRaisingStage {
+    function refund(uint256 amount) external nonZero(amount) {
+        require(
+            stage == FundStage.FUNDRAISING || stage == FundStage.CANCELED,
+            "not refundable"
+        );
+
         uint256 tonBalance = IERC20(TON).balanceOf(address(this));
         if (tonBalance < amount)
             IWTON(WTON).swapToTON(IERC20(WTON).balanceOf(address(this)));
