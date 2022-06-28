@@ -11,13 +11,16 @@ all : 채권 라이프사이클 1바퀴를 돌려주는 all in one 명령
 money : 계정에 돈 넣기 (admin, user1, user2, user3, user4 계정이 있음)  
 balance [user] : 계정 계좌 확인  
 deploy : TBondFactory 배포  
-make fundraisingPeriod stakingPeriod targetAmount : 채권 생성 ex) make 100 100 10000  
+make fundraisingPeriod stakingPeriod targetAmount
+- 채권 생성 ex) make 100 100 10000  
+
 view [bond] [user] : 채권 정보 조회  
 list : 채권 전부 출력  
 invest bond amount user : 채권에 투자
-    ex) TON 1000개 예금 invest 1 1000 user1
-    ex) WTON 1000개 예금 invest 1 1000wton user1
-    ex) TON / WTON 각각 1000개 예금 invest 1 1000/1000 user1
+- TON 1000개 예금 ex) invest 1 1000 user1
+- WTON 1000개 예금 ex) invest 1 1000wton user1
+- TON / WTON 각각 1000개 예금 ex) invest 1 1000/1000 user1
+
 stake bond : 채권 스테이킹  
 unstake bond : 채권 언스테이킹  
 withdraw bond : 채권 출금  
