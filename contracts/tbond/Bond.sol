@@ -101,13 +101,13 @@ contract Bond is Ownable, ERC20 {
         _mint(owner(), INITIAL_DEPOSIT_TON);
         // 채권 생성 시 관리자가 필수 참여하도록 설계
         // 관리자는 setup 호출 전 INITIAL_DEPOSIT 만큼 ton 토큰을 approve 해줘야 함
-        stage = FundStage.FUNDRAISING;
-        targetAmount = _targetAmount;
-        stakingPeriod = _stakingPeriod;
         unchecked {
+            stage = FundStage.FUNDRAISING;
+            targetAmount = _targetAmount;
+            stakingPeriod = _stakingPeriod;
             stakable = block.number + _fundraisingPeriod;
+            incentiveTo = _incentiveTo;
         }
-        incentiveTo = _incentiveTo;
     }
 
     /// @notice 사용자 지갑에서 amount만큼 TON 토큰을 출금하고 TBOND 토큰 발행
@@ -152,11 +152,10 @@ contract Bond is Ownable, ERC20 {
 
     /// @notice 모금된 TON/WTON 토큰을 layer2 operator에게 staking
     function stake() external onlyRaisingStage {
-        require(block.number >= stakable, "not reaching stakable block");
-
-        uint256 tonBalance = IERC20(TON).balanceOf(address(this));
-        uint256 wtonBalance = IERC20(WTON).balanceOf(address(this));
         unchecked {
+            require(block.number >= stakable, "not reaching stakable block");
+            uint256 tonBalance = IERC20(TON).balanceOf(address(this));
+            uint256 wtonBalance = IERC20(WTON).balanceOf(address(this));
             uint256 totalBalance = toWAD(wtonBalance) + tonBalance;
             require(
                 totalBalance >= targetAmount,
@@ -216,8 +215,8 @@ contract Bond is Ownable, ERC20 {
             "processRequest"
         );
         stage = FundStage.END;
-        uint256 claimedAmount = IERC20(TON).balanceOf(address(this));
         unchecked {
+            uint256 claimedAmount = IERC20(TON).balanceOf(address(this));
             uint256 incentive = wdiv2(claimedAmount - totalSupply(), 2e19);
             IERC20(TON).safeTransfer(incentiveTo, incentive);
             exchangeRate = wdiv2(claimedAmount - incentive, totalSupply());
@@ -237,9 +236,8 @@ contract Bond is Ownable, ERC20 {
     /// @param amount TBOND 토큰 수량
     function refund(uint256 amount) external nonZero(amount) onlyRaisingStage {
         uint256 tonBalance = IERC20(TON).balanceOf(address(this));
-        if (tonBalance < amount) {
+        if (tonBalance < amount)
             IWTON(WTON).swapToTON(IERC20(WTON).balanceOf(address(this)));
-        }
         _burn(_msgSender(), amount);
         IERC20(TON).safeTransfer(_msgSender(), amount);
     }
@@ -276,10 +274,17 @@ contract Bond is Ownable, ERC20 {
             uint256,
             uint256,
             uint256,
+            uint256,
             uint256
         )
     {
-        return (targetAmount, stakable, unstakeable, withdrawable);
+        return (
+            targetAmount,
+            stakable,
+            unstakeable,
+            withdrawable,
+            totalSupply()
+        );
     }
 
     function bondBalanceOf() external view returns (uint256) {
