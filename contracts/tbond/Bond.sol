@@ -239,8 +239,8 @@ contract Bond is Ownable, ERC20 {
         IERC20(TON).safeTransfer(_msgSender(), amount);
     }
 
-    /// @notice 펀드 모집에 실패했을 때 TBOND의 상태를 취소 상태로 변경
-    function cancel() external onlyOwner {
+    /// @notice 펀드 모집에 실패했을 때 TBOND의 상태를 취소 상태로 변경, 펀드 모금 단계에서만 호출 가능
+    function cancel() external onlyOwner onlyRaisingStage {
         stage = FundStage.CANCELED;
     }
 
