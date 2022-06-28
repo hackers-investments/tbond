@@ -39,7 +39,8 @@ contract Bond is Ownable, ERC20 {
         FUNDRAISING,
         STAKING,
         UNSTAKING,
-        END
+        END,
+        CANCELED
     }
     FundStage public stage;
 
@@ -236,6 +237,11 @@ contract Bond is Ownable, ERC20 {
         }
         _burn(_msgSender(), amount);
         IERC20(TON).safeTransfer(_msgSender(), amount);
+    }
+
+    /// @notice 펀드 모집에 실패했을 때 TBOND의 상태를 취소 상태로 변경
+    function cancel() external onlyOwner {
+        stage = FundStage.CANCELED;
     }
 
     /// @notice 인센티브를 지급한 지갑 주소 설정
