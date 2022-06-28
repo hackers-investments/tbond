@@ -63,12 +63,12 @@ const utils = {
   revert: (n) => network.provider.send('evm_revert', [n]),
   reset: () => network.provider.send('hardhat_reset', []),
   now: () => ethers.provider.getBlockNumber(),
-  snapshotlist: (snapshotData) => {
-    if (Object.keys(snapshotData).length) {
+  snapshotlist: (data) => {
+    if (Object.keys(data).length) {
       log('Snapshot List');
-      for (let name of Object.keys(snapshotData)) {
+      for (let name of Object.keys(data)) {
         log(`Name: ${name}`);
-        log(`BlockNumber: ${snapshotData[name].block}`);
+        log(`BlockNumber: ${data[name].block}`);
       }
     }
   },

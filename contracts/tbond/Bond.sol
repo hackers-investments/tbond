@@ -134,9 +134,7 @@ contract Bond is Ownable, ERC20, OnApprove {
                     amountWton
                 );
                 _mint(sender, toWAD(amountWton) + amount);
-            } else {
-                _mint(sender, amount);
-            }
+            } else _mint(sender, amount);
         } else {
             IERC20(WTON).safeTransferFrom(sender, address(this), amount);
             _mint(sender, toWAD(amount));

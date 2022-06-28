@@ -40,13 +40,12 @@ task('balance')
 
 task('deploy').setAction(async () => {
   if ((await get('money')) != 'on') await run('money');
-  const accounts = await ethers.getSigners();
+  const admin = await getUser('admin');
   let factory = await get('factory');
-  if (factory)
-    factory = await ethers.getContractAt('Factory', factory, accounts[0]);
+  if (factory) factory = await ethers.getContractAt('Factory', factory, admin);
   else {
     factory = await (
-      await ethers.getContractFactory('Factory', accounts[0])
+      await ethers.getContractFactory('Factory', admin)
     ).deploy();
     await factory.deployed();
     await set('factory', factory.address);
@@ -60,19 +59,19 @@ task('make')
   .addPositionalParam('stakingPeriod')
   .addPositionalParam('targetAmount')
   .setAction(async (args) => {
-    const accounts = await ethers.getSigners();
+    const admin = await getUser('admin');
     const factory = await run('deploy');
     await factory.create(StakeRegistry);
     const round = await factory.round();
     const addr = await factory.bonds(round);
-    const bond = await getBond(round, accounts[0]);
-    const ton = await getContract(TON, accounts[0]);
+    const bond = await getBond(round, admin);
+    const ton = await getContract(TON, admin);
     await ton.approve(addr, parseTon(1000));
     await bond.setup(
       args.fundraisingPeriod,
       args.stakingPeriod,
       parseTon(args.targetAmount),
-      accounts[0].address
+      admin.address
     );
     log(`Bond Deployed @ ${addr}`);
     await run('list');
@@ -86,6 +85,8 @@ task('view')
     const ton = await getContract(TON, ethers.provider);
     const wton = await getContract(WTON, ethers.provider);
     const bond = await getBond(args.number);
+    const tonBalance = await ton.balanceOf(bond.address);
+    const wtonBalance = await wton.balanceOf(bond.address);
     const stage = Number.parseInt(await bond.stage());
     if (args.now) log(`Block Now: ${await now()}`);
     log(`[${await bond.name()}]`);
@@ -95,19 +96,21 @@ task('view')
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
     );
     log(
-      `Amount: ${sum(
-        fromTon(await ton.balanceOf(bond.address)),
-        fromwTon(await wton.balanceOf(bond.address))
-      )} / ${fromTon(targetAmount)}`
+      `Amount: ${fromTon(
+        (await ton.balanceOf(bond.address)).add(
+          (await wton.balanceOf(bond.address)).div(1e9)
+        )
+      )}`
     );
     log(`Bond: ${fromTon(await bond.totalSupply())}`);
     log(`Stakable: ${stakable}`);
     log(`Unstakeable: ${unstakeable}`);
     log(`Withdrawable: ${withdrawable}`);
     if (args.user) {
-      const user = await getUser(args.user);
       log(
-        `TBOND-${args.number} Balance: ${await bond.balanceOf(user.address)}`
+        `TBOND-${args.number} Balance for ${args.user}: ${fromTon(
+          await bond.balanceOf((await getUser(args.user)).address)
+        )}`
       );
     }
   });
@@ -157,13 +160,10 @@ task('invest')
       const data = abicoder().encode(['uint256'], [wtonamount]);
       await ton.approveAndCall(bond.address, tonamount, data);
     }
-    if (tonamount && !wtonamount) {
+    if (tonamount && !wtonamount)
       await ton.approveAndCall(bond.address, tonamount, []);
-    }
-    if (!tonamount && wtonamount) {
+    if (!tonamount && wtonamount)
       await wton.approveAndCall(bond.address, wtonamount, []);
-    }
-
     await run('view', { number: args.bond, now: 'on' });
   });
 
@@ -206,7 +206,7 @@ task('save')
       return;
     }
     snapshotData[args.name] = {
-      block: await ethers.provider.getBlockNumber(),
+      block: await now(),
       number: await snapshot(),
     };
     await set('snapshot', JSON.stringify(snapshotData));
