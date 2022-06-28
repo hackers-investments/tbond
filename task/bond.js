@@ -126,6 +126,9 @@ task('view')
         targetAmount
       )}`
     );
+    log(
+      `Bond: ${fromTon(await bond.totalSupply())}`
+    );
     log(`Stakable: ${stakable}`);
     log(`Unstakeable: ${unstakeable}`);
     log(`Withdrawable: ${withdrawable}`);
@@ -176,18 +179,21 @@ task('invest')
     const ton = await hre.getContract(TON, user);
     const wton = await hre.getContract(WTON, user);
     if (tonamount && wtonamount) {
-      await ton.approve(bond.address, tonamount);
       await wton.approve(bond.address, wtonamount);
-      await bond.depositBoth(tonamount, wtonamount);
+      const abicoder = ethers.utils.defaultAbiCoder;
+      const data = abicoder.encode(
+        ['uint256'],
+        [wtonamount]
+      );
+      await ton.approveAndCall(bond.address, tonamount, data);
     }
     if (tonamount && !wtonamount) {
-      await ton.approve(bond.address, tonamount);
-      await bond.depositTON(tonamount);
+      await ton.approveAndCall(bond.address, tonamount, []);
     }
     if (!tonamount && wtonamount) {
-      await wton.approve(bond.address, wtonamount);
-      await bond.depositWTON(wtonamount);
+      await wton.approveAndCall(bond.address, wtonamount, []);
     }
+
     await run('view', { number: args.bond, now: 'on' });
   });
 
