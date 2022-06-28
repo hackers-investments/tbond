@@ -1,4 +1,4 @@
-require('./utils.js').imports();
+require('../utils.js').imports();
 
 extendEnvironment((hre) => {
   hre.users = ['admin', 'user1', 'user2', 'user3', 'user4'];
@@ -26,11 +26,6 @@ extendEnvironment((hre) => {
     if (index == -1) return accounts[parseInt(user)];
     else return accounts[index];
   };
-});
-
-task('test').setAction(async () => {
-  var bond = await hre.getBond('1');
-  log(await bond.result());
 });
 
 task('money').setAction(async () => {

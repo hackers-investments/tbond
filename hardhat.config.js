@@ -1,10 +1,9 @@
 require('@nomiclabs/hardhat-waffle');
 require('@nomiclabs/hardhat-solhint');
 require('hardhat-gas-reporter');
-// require('hardhat-contract-sizer')
-const { task } = require('hardhat/config');
 require('dotenv').config();
-require('./tasks/tasks');
+require('./tasks/bond');
+require('./tasks/exchange');
 
 module.exports = {
   networks: {
@@ -14,12 +13,9 @@ module.exports = {
       },
       forking: {
         url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
-        blockNumber: 14997900,
+        blockNumber: 15000000,
       },
     },
-  },
-  contractSizer: {
-    runOnCompile: true,
   },
   solidity: {
     compilers: [

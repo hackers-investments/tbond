@@ -10,9 +10,14 @@ contract TBondFactory is Ownable {
     mapping(uint256 => address) public bonds;
 
     function create(address _registry) external onlyOwner {
-        string memory name = string.concat("TBOND-", Strings.toString(++round));
-        TBondManager manager = new TBondManager(_registry, name);
-        manager.changeManager(_msgSender());
-        bonds[round] = address(manager);
+        unchecked {
+            string memory name = string.concat(
+                "TBOND-",
+                Strings.toString(++round)
+            );
+            TBondManager manager = new TBondManager(_registry, name);
+            manager.changeManager(_msgSender());
+            bonds[round] = address(manager);
+        }
     }
 }
