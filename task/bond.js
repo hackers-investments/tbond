@@ -84,6 +84,7 @@ task('view')
   .addOptionalPositionalParam('user')
   .setAction(async (args) => {
     const ton = await getContract(TON, ethers.provider);
+    const wton = await getContract(WTON, ethers.provider);
     const bond = await getBond(args.number);
     const stage = Number.parseInt(await bond.stage());
     if (args.now) log(`Block Now: ${await now()}`);
@@ -94,13 +95,12 @@ task('view')
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
     );
     log(
-      `Amount: ${fromTon(await ton.balanceOf(bond.address))} / ${fromTon(
-        targetAmount
-      )}`
+      `Amount: ${sum(
+        fromTon(await ton.balanceOf(bond.address)),
+        fromwTon(await wton.balanceOf(bond.address))
+      )} / ${fromTon(targetAmount)}`
     );
-    log(
-      `Bond: ${fromTon(await bond.totalSupply())}`
-    );
+    log(`Bond: ${fromTon(await bond.totalSupply())}`);
     log(`Stakable: ${stakable}`);
     log(`Unstakeable: ${unstakeable}`);
     log(`Withdrawable: ${withdrawable}`);
@@ -134,7 +134,7 @@ task('list').setAction(async () => {
 task('invest')
   .addPositionalParam('bond')
   .addPositionalParam('amount')
-  .addPositionalParam('user')
+  .addOptionalPositionalParam('user')
   .setAction(async (args) => {
     let tonamount, wtonamount;
     if (args.amount.includes('/')) {
@@ -146,17 +146,15 @@ task('invest')
     else if (args.amount.endsWith('ton'))
       tonamount = parseTon(args.amount.slice(0, -3));
     else tonamount = parseTon(args.amount);
-    const user = await getUser(args.user);
+    const accounts = await ethers.getSigners();
+    let user = accounts[0];
+    if (args.user) user = await getUser(args.user, accounts);
     const bond = await getBond(args.bond, user);
     const ton = await getContract(TON, user);
     const wton = await getContract(WTON, user);
     if (tonamount && wtonamount) {
       await wton.approve(bond.address, wtonamount);
-      const abicoder = ethers.utils.defaultAbiCoder;
-      const data = abicoder.encode(
-        ['uint256'],
-        [wtonamount]
-      );
+      const data = abicoder().encode(['uint256'], [wtonamount]);
       await ton.approveAndCall(bond.address, tonamount, data);
     }
     if (tonamount && !wtonamount) {

@@ -12,7 +12,6 @@ import {IDepositManager} from "../interfaces/IDepositManager.sol";
 import {ITokamakRegistry} from "../interfaces/ITokamakRegistry.sol";
 import {OnApprove} from "./OnApprove.sol";
 
-
 /// @title TON/WTON 토큰을 모아서 스테이킹하고 리워드를 분배하는 채권 컨트랙트
 /// @author Jeongun Baek (blackcow@hackersinvestments.com)
 /// @dev [TODO] ERC20PresetMinterPauser 코드에서 필요없는 코드를 제거하고, 우리 필요한 기능만 넣어서 최적화하는 작업 필요
@@ -123,67 +122,27 @@ contract Bond is Ownable, ERC20, OnApprove {
         uint256 amount,
         bytes calldata data
     ) external override onlyRaisingStage returns (bool) {
-        require(
-            _msgSender() == TON || _msgSender() == WTON,
-            "sender is not TON or WTON");
+        require(_msgSender() == TON || _msgSender() == WTON, "Invalid token");
 
         if (_msgSender() == TON) {
             uint256 amountWton = _decodeApproveData(data);
             IERC20(TON).safeTransferFrom(sender, address(this), amount);
             if (amountWton > 0) {
-                IERC20(WTON).safeTransferFrom(sender, address(this), amountWton);    
+                IERC20(WTON).safeTransferFrom(
+                    sender,
+                    address(this),
+                    amountWton
+                );
                 _mint(sender, toWAD(amountWton) + amount);
-            }
-            else {
+            } else {
                 _mint(sender, amount);
             }
-        }
-        else { // _msgSender() == WTON
+        } else {
             IERC20(WTON).safeTransferFrom(sender, address(this), amount);
             _mint(sender, toWAD(amount));
         }
-        
+
         return true;
-    }
-
-    /// @notice 사용자 지갑에서 amount만큼 TON 토큰을 출금하고 TBOND 토큰 발행
-    /// @param amount TON 토큰 수량 / 수량 만큼 approve 필수
-    function depositTON(uint256 amount)
-        external
-        nonZero(amount)
-        onlyRaisingStage
-    {
-        IERC20(TON).safeTransferFrom(_msgSender(), address(this), amount);
-        _mint(_msgSender(), amount);
-    }
-
-    /// @notice 사용자 지갑에서 amount만큼 WTON 토큰을 출금하고 TBOND 토큰 발행
-    /// @param amount WTON 토큰 수량 / 수량 만큼 approve 필수
-    function depositWTON(uint256 amount)
-        external
-        nonZero(amount)
-        onlyRaisingStage
-    {
-        IERC20(WTON).safeTransferFrom(_msgSender(), address(this), amount);
-        _mint(_msgSender(), toWAD(amount));
-        // WTON은 RAY(1e27) decimal를 사용하기 때문에 WAD(1e18)로 변환해서 TBOND 발행
-    }
-
-    /// @notice 사용자 지갑에서 amount만큼 TON/WTON 토큰을 출금하고 TBOND 토큰 발행
-    /// @param amountTon TON 토큰 수량 / 수량 만큼 approve 필수
-    /// @param amountWton WTON 토큰 수량 / 수량 만큼 approve 필수
-    function depositBoth(uint256 amountTon, uint256 amountWton)
-        external
-        nonZero(amountTon)
-        nonZero(amountWton)
-        onlyRaisingStage
-    {
-        IERC20(TON).safeTransferFrom(_msgSender(), address(this), amountTon);
-        IERC20(WTON).safeTransferFrom(_msgSender(), address(this), amountWton);
-        unchecked {
-            _mint(_msgSender(), amountTon + toWAD(amountWton));
-        }
-        // WTON은 RAY(1e27) decimal를 사용하기 때문에 WAD(1e18)로 변환해서 TBOND 발행
     }
 
     /// @notice 모금된 TON/WTON 토큰을 layer2 operator에게 staking
@@ -275,7 +234,6 @@ contract Bond is Ownable, ERC20, OnApprove {
             stage == FundStage.FUNDRAISING || stage == FundStage.CANCELED,
             "not refundable"
         );
-
         uint256 tonBalance = IERC20(TON).balanceOf(address(this));
         if (tonBalance < amount)
             IWTON(WTON).swapToTON(IERC20(WTON).balanceOf(address(this)));
@@ -329,7 +287,6 @@ contract Bond is Ownable, ERC20, OnApprove {
     }
 
     function bondBalanceOf() external view returns (uint256) {
-        require(stage == FundStage.END, "not withdrawn");
         return wmul2(balanceOf(_msgSender()), exchangeRate);
     }
 

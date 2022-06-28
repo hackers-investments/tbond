@@ -20,6 +20,7 @@ const utils = {
   SeigManager: '0x710936500ac59e8551331871cbad3d33d5e0d909',
   StakeRegistry: '0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367',
   users: ['admin', 'user1', 'user2', 'user3', 'user4'],
+  abicoder: () => ethers.utils.defaultAbiCoder,
   key: (n) => ethers.utils.id(`TBOND-${n}`),
   log: (msg) => console.log(msg ? msg : ''),
   hex: (v) => `0x${v.toHexString().match(/(0x[0]*)([a-fA-F0-9]*)/)[2]}`,
