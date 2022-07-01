@@ -5,14 +5,10 @@ const utils = {
     'function approve(address, uint) returns (bool)',
     'function owner() view returns (address)',
     'function transferOwnership(address)',
-    'function isMinter(address) view returns (bool)',
     'function mint(address, uint) returns (bool)',
     'function swapFromTON(uint tonAmount) public returns (bool)',
     'function swapFromTONAndTransfer(address, uint) returns (bool)',
-    'function depositBoth(uint, uint)',
-    'function depositWTON(uint)',
-    'function depositTON(uint)',
-    'function info() view returns (uint, uint , uint , uint)',
+    'function bondInfo() view returns (uint, uint , uint , uint)',
     'function approveAndCall(address,uint,bytes)',
   ],
   TON: '0x2be5e8c109e2197D077D13A82dAead6a9b3433C5',
@@ -28,40 +24,34 @@ const utils = {
   parseEth: (v) => ethers.utils.parseUnits(Number.parseInt(v).toString(), 18),
   parseTon: (v) => ethers.utils.parseUnits(Number.parseInt(v).toString(), 18),
   parsewTon: (v) => ethers.utils.parseUnits(Number.parseInt(v).toString(), 27),
-  fromEth: function (v) {
-    return this.fromTon(v);
-  },
   fromTon: (v) => ethers.utils.formatUnits(ethers.BigNumber.from(v), 18),
+  fromEth: (v) => fromTon(v),
   fromwTon: (v) => ethers.utils.formatUnits(ethers.BigNumber.from(v), 27),
-  mining: (n) => network.provider.send('hardhat_mine', [`0x${n.toString(16)}`]),
-  setBalance: function (a, v) {
-    return network.provider.send('hardhat_setBalance', [
-      a,
-      this.hex(this.parseEth(v)),
-    ]);
-  },
+  mining: (n) => ethers.provider.send('hardhat_mine', [`0x${n.toString(16)}`]),
+  setBalance: (a, v) =>
+    ethers.provider.send('hardhat_setBalance', [a, hex(parseEth(v))]),
   getBalance: (a) => ethers.provider.getBalance(a),
   start_impersonate: (addr) =>
-    network.provider.send('hardhat_impersonateAccount', [addr]),
+    ethers.provider.send('hardhat_impersonateAccount', [addr]),
   stop_impersonate: (addr) =>
-    network.provider.send('hardhat_stopImpersonatingAccount', [addr]),
+    ethers.provider.send('hardhat_stopImpersonatingAccount', [addr]),
   set: (k, v) =>
-    network.provider.send('hardhat_setCode', [
+    ethers.provider.send('hardhat_setCode', [
       ethers.utils.id(k).slice(0, 42),
       `0x${Buffer.from(v).toString('hex')}`,
     ]),
   get: async (k) =>
     Buffer.from(
       (
-        await network.provider.send('eth_getCode', [
+        await ethers.provider.send('eth_getCode', [
           ethers.utils.id(k).slice(0, 42),
         ])
       ).slice(2),
       'hex'
     ).toString(),
-  snapshot: () => network.provider.send('evm_snapshot', []),
-  revert: (n) => network.provider.send('evm_revert', [n]),
-  reset: () => network.provider.send('hardhat_reset', []),
+  snapshot: () => ethers.provider.send('evm_snapshot', []),
+  revert: (n) => ethers.provider.send('evm_revert', [n]),
+  reset: () => ethers.provider.send('hardhat_reset', []),
   now: () => ethers.provider.getBlockNumber(),
   snapshotlist: (data) => {
     if (Object.keys(data).length) {
@@ -77,12 +67,19 @@ const utils = {
     return await new ethers.Contract(addr, ABI, signer);
   },
   getBond: async (number, signer) => {
-    const factory = await run('deploy');
+    const factory = await run('factory');
     const addr = await factory.bonds(number);
     return await ethers.getContractAt('Bond', addr, signer);
   },
-  getUser: async (user, acc) => {
-    const accounts = acc ? acc : await ethers.getSigners();
+  getUser: (user) => {
+    const accounts = [
+      '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+      '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+      '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
+      '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6',
+      '0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a',
+    ].map((x) => new ethers.Wallet(x, ethers.provider));
+    if (!user) return accounts;
     const index = ['admin', 'user1', 'user2', 'user3', 'user4'].indexOf(user);
     if (index == -1) return accounts[parseInt(user)];
     else return accounts[index];

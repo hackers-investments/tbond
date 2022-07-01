@@ -1,7 +1,7 @@
 require('../utils.js').imports();
 
 task('money').setAction(async () => {
-  const accounts = await ethers.getSigners();
+  const accounts = getUser();
   await start_impersonate(WTON);
   await start_impersonate(SeigManager);
   for (const addr of accounts.map((x) => x.address).concat([WTON, SeigManager]))
@@ -21,9 +21,9 @@ task('money').setAction(async () => {
 task('balance')
   .addOptionalPositionalParam('user')
   .setAction(async (args) => {
-    let accounts = await ethers.getSigners();
+    let accounts = getUser();
     if (args.user) {
-      accounts = [await getUser(args.user, accounts)];
+      accounts = [getUser(args.user)];
       users = [args.user];
     }
     const ton = await getContract(TON, ethers.provider);
@@ -38,9 +38,9 @@ task('balance')
     }
   });
 
-task('deploy').setAction(async () => {
+task('factory').setAction(async () => {
   if ((await get('money')) != 'on') await run('money');
-  const admin = await getUser('admin');
+  const admin = getUser('admin');
   let factory = await get('factory');
   if (factory) factory = await ethers.getContractAt('Factory', factory, admin);
   else {
@@ -59,8 +59,8 @@ task('make')
   .addPositionalParam('stakingPeriod')
   .addPositionalParam('targetAmount')
   .setAction(async (args) => {
-    const admin = await getUser('admin');
-    const factory = await run('deploy');
+    const admin = getUser('admin');
+    const factory = await run('factory');
     await factory.create(StakeRegistry);
     const round = await factory.round();
     const addr = await factory.bonds(round);
@@ -79,19 +79,21 @@ task('make')
   });
 
 task('view')
-  .addPositionalParam('number')
+  .addPositionalParam('bond')
   .addOptionalPositionalParam('user')
   .setAction(async (args) => {
     const ton = await getContract(TON, ethers.provider);
     const wton = await getContract(WTON, ethers.provider);
-    const bond = await getBond(args.number);
-    const tonBalance = await ton.balanceOf(bond.address);
-    const wtonBalance = await wton.balanceOf(bond.address);
+    const bond = await getBond(args.bond);
     const stage = Number.parseInt(await bond.stage());
     if (args.now) log(`Block Now: ${await now()}`);
     log(`[${await bond.name()}]`);
-    const [targetAmount, stakable, unstakeable, withdrawable] =
-      await bond.info();
+    const [
+      targetAmount,
+      stakable,
+      unstakeable,
+      withdrawable,
+    ] = await bond.bondInfo();
     log(
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
     );
@@ -108,31 +110,35 @@ task('view')
     log(`Withdrawable: ${withdrawable}`);
     if (args.user) {
       log(
-        `TBOND-${args.number} Balance for ${args.user}: ${fromTon(
-          await bond.balanceOf((await getUser(args.user)).address)
+        `TBOND-${args.bond} Balance for ${args.user}: ${fromTon(
+          await bond.balanceOf(getUser(args.user).address)
         )}`
       );
     }
   });
 
-task('list').setAction(async () => {
-  const factory = await run('deploy');
-  const round = (await factory.round()).toNumber();
-  if (round) {
-    log('Bond List');
-    log(`Block Now: ${await now()}`);
-    for (let i = 1; i <= round; i++) {
-      await run('view', { number: i.toString() });
-      if (i != round) log('='.repeat(51));
+task('list')
+  .addOptionalPositionalParam('bond')
+  .setAction(async (args) => {
+    const factory = await run('factory');
+    let round = (await factory.round()).toNumber();
+    if (Number.parseInt(args.bond) <= round) {
+      await run('view', { bond: args.bond, now: true });
+    } else if (round) {
+      log('Bond List');
+      log(`Block Now: ${await now()}`);
+      for (let i = 1; i <= round; i++) {
+        await run('view', { bond: i.toString() });
+        if (i != round) log('='.repeat(51));
+      }
+    } else {
+      await run('make', {
+        fundraisingPeriod: '10000',
+        stakingPeriod: '10000',
+        targetAmount: '1000',
+      });
     }
-  } else {
-    await run('make', {
-      fundraisingPeriod: '10000',
-      stakingPeriod: '10000',
-      targetAmount: '1000',
-    });
-  }
-});
+  });
 
 task('invest')
   .addPositionalParam('bond')
@@ -149,9 +155,8 @@ task('invest')
     else if (args.amount.endsWith('ton'))
       tonamount = parseTon(args.amount.slice(0, -3));
     else tonamount = parseTon(args.amount);
-    const accounts = await ethers.getSigners();
-    let user = accounts[0];
-    if (args.user) user = await getUser(args.user, accounts);
+    let user = getUser('admin');
+    if (args.user) user = getUser(args.user);
     const bond = await getBond(args.bond, user);
     const ton = await getContract(TON, user);
     const wton = await getContract(WTON, user);
@@ -164,7 +169,7 @@ task('invest')
       await ton.approveAndCall(bond.address, tonamount, []);
     if (!tonamount && wtonamount)
       await wton.approveAndCall(bond.address, wtonamount, []);
-    await run('view', { number: args.bond, now: 'on' });
+    await run('view', { bond: args.bond, now: 'on' });
   });
 
 task('stage')
@@ -172,14 +177,14 @@ task('stage')
   .addPositionalParam('bond')
   .addOptionalPositionalParam('user')
   .setAction(async (args) => {
-    let user = await getUser('admin');
-    if (args.user) user = await getUser(args.user);
+    let user = getUser('admin');
+    if (args.user) user = getUser(args.user);
     const bond = await getBond(args.bond, user);
     if (args.mode == 'stake')
       await bond.stake((overrides = { gasLimit: 10000000 }));
     if (args.mode == 'unstake') await bond.unstake();
     if (args.mode == 'withdraw') await bond.withdraw();
-    await run('view', { number: args.bond, now: 'on' });
+    await run('view', { bond: args.bond, now: 'on' });
   });
 
 task('claim')
@@ -188,11 +193,11 @@ task('claim')
   .addPositionalParam('amount')
   .addPositionalParam('user')
   .setAction(async (args) => {
-    const user = await getUser(args.user);
+    const user = getUser(args.user);
     const bond = await getBond(args.bond, user);
     if (args.mode == 'claim') await bond.claim(parseTon(args.amount));
     if (args.mode == 'refund') await bond.refund(parseTon(args.amount));
-    await run('view', { number: args.bond, now: 'on' });
+    await run('view', { bond: args.bond, now: 'on' });
   });
 
 task('save')

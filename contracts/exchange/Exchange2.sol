@@ -12,7 +12,7 @@ interface IFactory {
 }
 
 /// @title TBond 채권 거래소
-contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
+contract Exchange2 is Context, EIP712("TBond Exchange", "1.0") {
     using ECDSA for bytes32;
     using SafeERC20 for IERC20;
 

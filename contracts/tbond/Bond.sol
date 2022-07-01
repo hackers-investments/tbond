@@ -265,7 +265,7 @@ contract Bond is Ownable, ERC20, OnApprove {
     }
 
     /// @notice 채권의 상태 정보 반환
-    function info()
+    function bondInfo()
         external
         view
         returns (
