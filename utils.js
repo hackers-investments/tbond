@@ -79,7 +79,7 @@ const utils = {
       '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6',
       '0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a',
     ].map((x) => new ethers.Wallet(x, ethers.provider));
-    if (!user) return accounts;
+    if (user == undefined) return accounts;
     const index = ['admin', 'user1', 'user2', 'user3', 'user4'].indexOf(user);
     if (index == -1) return accounts[parseInt(user)];
     else return accounts[index];
