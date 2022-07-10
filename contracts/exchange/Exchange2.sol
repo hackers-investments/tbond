@@ -40,44 +40,41 @@ contract Exchange2 is Context, EIP712("TBond Exchange", "1.0") {
     }
 
     /// @notice 거래 실행
-    /// @param makerOrder 매도자 주문 데이터
-    /// @param takerOrder 매수자 주문 데이터
-    /// @param signature 서명
+    /// @param order 주문 데이터
+    /// @param sign 서명
+    /// @param proof 검증 데이터
     function executeOrder(
-        Order memory makerOrder,
-        Order memory takerOrder,
-        bytes calldata signature
-    ) external {
+        Order memory order,
+        bytes calldata sign,
+        bytes32 proof
+    ) external view returns (address) {
         require(
-            makerOrder.owner != takerOrder.owner &&
-                makerOrder.bond == takerOrder.bond &&
-                makerOrder.bondAmount == takerOrder.bondAmount &&
-                makerOrder.wtonAmount == takerOrder.wtonAmount &&
-                makerOrder.deadline == takerOrder.deadline &&
-                makerOrder.nonce == nonces[makerOrder.owner] &&
-                used[makerOrder.owner][makerOrder.nonce] == false &&
-                _msgSender() == takerOrder.owner,
+            used[order.owner][order.nonce] == false &&
+                keccak256(
+                    abi.encode(
+                        _msgSender(),
+                        order.bond,
+                        order.bondAmount,
+                        order.wtonAmount,
+                        order.deadline,
+                        order.nonce
+                    )
+                ) ==
+                proof,
             "Invalid order"
         );
-        address bond = IFactory(FACTORY).bonds(makerOrder.bond);
-        require(bond != address(0), "Bond not found");
-        address signer = signOrder(makerOrder).recover(signature);
-        require(signer != makerOrder.owner, "Invalid signature");
-        require(block.timestamp > makerOrder.deadline, "Order expired");
-        IERC20(bond).safeTransferFrom(
-            signer,
-            _msgSender(),
-            makerOrder.bondAmount
-        );
-        IERC20(WTON).safeTransferFrom(
-            _msgSender(),
-            signer,
-            takerOrder.wtonAmount
-        );
-        unchecked {
-            used[signer][makerOrder.nonce] = true;
-            nonces[signer]++;
-        }
+        return signOrder(order).recover(sign);
+        // address bond = IFactory(FACTORY).bonds(order.bond);
+        // require(bond != address(0), "Bond not found");
+        // address signer = signOrder(order).recover(sign);
+        // require(signer != order.owner, "Invalid signature");
+        // require(block.timestamp > order.deadline, "Order expired");
+        // IERC20(bond).safeTransferFrom(signer, _msgSender(), order.bondAmount);
+        // IERC20(WTON).safeTransferFrom(_msgSender(), signer, order.wtonAmount);
+        // unchecked {
+        //     used[signer][order.nonce] = true;
+        //     nonces[signer]++;
+        // }
     }
 
     /// @notice 사용자에게 할당된 nonce 값 업데이트

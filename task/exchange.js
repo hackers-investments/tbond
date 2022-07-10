@@ -1,7 +1,7 @@
 require('../utils.js').imports();
 
 const domain = (ex) => ({
-  name: 'TBOND Exchange',
+  name: 'TBond Exchange',
   version: '1.0',
   chainId: ethers.provider._network.chainId,
   verifyingContract: ex.address,
@@ -68,7 +68,7 @@ task('sell')
     else tradeData = [];
     tradeData.push({ order: order, sign: sign });
     await set('tradeData', JSON.stringify(tradeData));
-    await run('acution');
+    await run('auction');
   });
 
 task('auction').setAction(async () => {
@@ -95,8 +95,23 @@ task('buy')
     else tradeData = [];
     const taker = await getUser(args.user);
     const exchange = await run('exchange', { user: args.user });
-    order = tradeData[parseInt(args.order)];
-    if (!order) return log('Order not found!');
+    const data = tradeData[parseInt(args.order)];
+    if (!data) return log('Order not found!');
+    const order = data.order;
+    const proof = keccak256()(
+      abiCoder().encode(
+        ['address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256'],
+        [
+          taker.address,
+          order.bond,
+          order.bondAmount,
+          order.wtonAmount,
+          order.deadline,
+          order.nonce,
+        ]
+      )
+    );
     const wton = await getContract(WTON, taker);
-    log(order);
+    await wton.increaseAllowance(exchange.address, order.wtonAmount);
+    log(await exchange.executeOrder(order, data.sign, proof));
   });

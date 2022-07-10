@@ -5,17 +5,19 @@ const utils = {
     'function approve(address, uint) returns (bool)',
     'function owner() view returns (address)',
     'function mint(address, uint) returns (bool)',
-    'function swapFromTON(uint tonAmount) public returns (bool)',
+    'function swapFromTON(uint) public returns (bool)',
     'function swapFromTONAndTransfer(address, uint) returns (bool)',
     'function bondInfo() view returns (uint, uint , uint , uint)',
-    'function approveAndCall(address,uint,bytes)',
+    'function approveAndCall(address, uint, bytes)',
+    'function increaseAllowance(address, uint) returns (bool)',
   ],
   TON: '0x2be5e8c109e2197D077D13A82dAead6a9b3433C5',
   WTON: '0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2',
   SeigManager: '0x710936500ac59e8551331871cbad3d33d5e0d909',
   StakeRegistry: '0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367',
   users: ['admin', 'user1', 'user2', 'user3', 'user4'],
-  abicoder: () => ethers.utils.defaultAbiCoder,
+  abiCoder: () => ethers.utils.defaultAbiCoder,
+  keccak256: () => ethers.utils.keccak256,
   key: (n) => ethers.utils.id(`TBOND-${n}`),
   log: (msg) => console.log(msg ? msg : ''),
   hex: (v) => `0x${v.toHexString().match(/(0x[0]*)([a-fA-F0-9]*)/)[2]}`,
@@ -91,7 +93,7 @@ const utils = {
     const r = '0x' + sig.slice(0, 64);
     const s = '0x' + sig.slice(64, 128);
     const v = parseInt('0x' + sig.slice(128, 130), 16);
-    return abicoder().encode(['uint8', 'bytes32', 'bytes32'], [v, r, s]);
+    return abiCoder().encode(['uint8', 'bytes32', 'bytes32'], [v, r, s]);
   },
 };
 

@@ -36,7 +36,7 @@ task('balance')
     log('Account List');
     for (let i = 0; i < accounts.length; i++) {
       let address = accounts[i].address;
-      log(`[${users[i]}]`);
+      log(`[${users[i]}] @ ${accounts[i].address}`);
       log(`ETH Balance: ${fromEth(await getBalance(address))}`);
       log(`TON Balance: ${fromTon(await ton.balanceOf(address))}`);
       log(`WTON Balance: ${fromwTon(await wton.balanceOf(address))}`);
@@ -174,7 +174,7 @@ task('invest')
     ]);
     if (tonamount && wtonamount) {
       await wton.approve(bond.address, wtonamount);
-      const data = abicoder().encode(['uint256'], [wtonamount]);
+      const data = abiCoder().encode(['uint256'], [wtonamount]);
       await ton.approveAndCall(bond.address, tonamount, data);
     }
     if (tonamount && !wtonamount)
