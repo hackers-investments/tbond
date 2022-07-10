@@ -18,21 +18,24 @@ const type = {
   ],
 };
 
-task('exchange').setAction(async () => {
-  const admin = await getUser('admin');
-  let exchange = await get('exchange');
-  if (exchange)
-    exchange = await ethers.getContractAt('Exchange2', exchange, admin);
-  else {
-    exchange = await (
-      await ethers.getContractFactory('Exchange2', admin)
-    ).deploy(await get('factory'), WTON);
-    await exchange.deployed();
-    await set('exchange', exchange.address);
-    log(`Exchange Deployed @ ${exchange.address}`);
-  }
-  return exchange;
-});
+task('exchange')
+  .addOptionalPositionalParam('user')
+  .setAction(async (args) => {
+    let user = await getUser('admin');
+    if (args.user) user = await getUser(args.user);
+    let exchange = await get('exchange');
+    if (exchange)
+      exchange = await ethers.getContractAt('Exchange2', exchange, user);
+    else {
+      exchange = await (
+        await ethers.getContractFactory('Exchange2', user)
+      ).deploy(await get('factory'), WTON);
+      await exchange.deployed();
+      await set('exchange', exchange.address);
+      log(`Exchange Deployed @ ${exchange.address}`);
+    }
+    return exchange;
+  });
 
 task('sell')
   .addPositionalParam('bond')
@@ -41,10 +44,10 @@ task('sell')
   .addPositionalParam('deadline')
   .addPositionalParam('user')
   .setAction(async (args) => {
-    const bond = await getBond(args.bond);
     const maker = await getUser(args.user);
-    const exchange = await run('exchange');
-    await bond.approve(exchange.address, args.bondAmount);
+    const bond = await getBond(args.bond, maker);
+    const exchange = await run('exchange', { user: args.user });
+    await bond.increaseAllowance(exchange.address, args.bondAmount);
 
     order = {
       owner: maker.address,
@@ -55,21 +58,45 @@ task('sell')
       deadline: args.deadline,
     };
 
+    await exchange.updateNonce();
+
     const sign = getSign(
       await maker._signTypedData(domain(exchange), type, order)
     );
-
-    log({ order: order, sign: sign });
-
     let tradeData = await get('tradeData');
     if (tradeData) tradeData = JSON.parse(tradeData);
-    else tradeData = {};
+    else tradeData = [];
+    tradeData.push({ order: order, sign: sign });
+    await set('tradeData', JSON.stringify(tradeData));
+    await run('acution');
   });
 
+task('auction').setAction(async () => {
+  let tradeData = await get('tradeData');
+  if (tradeData) tradeData = JSON.parse(tradeData);
+  else tradeData = [];
+  for (let i in tradeData) {
+    log(`Order Number ${i}`);
+    log(`Maker : ${tradeData[i].order.owner}`);
+    log(`Bond : TBOND-${tradeData[i].order.bond}`);
+    log(`Amount : ${tradeData[i].order.bondAmount}`);
+    log(`Price : ${tradeData[i].order.wtonAmount} wton`);
+    log(`End : ${tradeData[i].order.deadline}`);
+    if (i != tradeData) log('='.repeat(51));
+  }
+});
+
 task('buy')
-  .addPositionalParam('bond')
+  .addPositionalParam('order')
   .addPositionalParam('user')
   .setAction(async (args) => {
-    const maker = await getUser(args.user);
-    const exchange = await run('exchange');
+    let tradeData = await get('tradeData');
+    if (tradeData) tradeData = JSON.parse(tradeData);
+    else tradeData = [];
+    const taker = await getUser(args.user);
+    const exchange = await run('exchange', { user: args.user });
+    order = tradeData[parseInt(args.order)];
+    if (!order) return log('Order not found!');
+    const wton = await getContract(WTON, taker);
+    log(order);
   });

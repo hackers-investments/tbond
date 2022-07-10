@@ -75,14 +75,14 @@ contract Exchange2 is Context, EIP712("TBond Exchange", "1.0") {
             takerOrder.wtonAmount
         );
         unchecked {
-            used[signer][nonces[signer]] = true;
+            used[signer][makerOrder.nonce] = true;
             nonces[signer]++;
         }
     }
 
     /// @notice 사용자에게 할당된 nonce 값 업데이트
     /// @dev 주문 취소, 가격 변경 시 nonce 값 변경 필수
-    function updateNonce() private {
+    function updateNonce() public {
         unchecked {
             nonces[_msgSender()]++;
         }

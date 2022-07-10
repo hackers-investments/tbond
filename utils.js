@@ -70,6 +70,7 @@ const utils = {
     const addr = await factory.bonds(number);
     return await ethers.getContractAt('Bond', addr, signer);
   },
+  names: ['admin', 'user1', 'user2', 'user3', 'user4'],
   getUser: async (user) => {
     const accounts = await Promise.all(
       [
@@ -81,7 +82,7 @@ const utils = {
       ].map((x) => new ethers.Wallet(x, ethers.provider))
     );
     if (user == undefined) return accounts;
-    const index = ['admin', 'user1', 'user2', 'user3', 'user4'].indexOf(user);
+    const index = names.indexOf(user);
     if (index == -1) return accounts[parseInt(user)];
     else return accounts[index];
   },

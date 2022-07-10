@@ -27,7 +27,7 @@ task('balance')
     let accounts = await getUser();
     if (args.user) {
       accounts = [await getUser(args.user)];
-      users = [args.user];
+      users = [args.user.length == 1 ? names[parseInt(args.user)] : args.user];
     }
     const [ton, wton] = await Promise.all([
       getContract(TON, ethers.provider),
