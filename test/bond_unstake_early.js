@@ -4,7 +4,7 @@ const { expect } = chai;
 
 require('../utils.js').imports();
 
-describe('Test for BOND contract', () => {
+describe('Test for BOND contract(unstake early)', () => {
   let ton;
   let wton;
   let bond;
@@ -72,53 +72,17 @@ describe('Test for BOND contract', () => {
     expect(parseInt(fromEth(tonBalance))).to.be.equal(0);
   });
   it('5. stake()', async () => {
-    mining(10000);
+    // mint TON (+1 block)
+    // approveAndCall TON (+1 block)
+    // mint WTON (+1 block)
+    // approveAndCall WTON (+1 block)
+    // stake (+1 block)
+    mining(95);
     await bond.stake();
   });
-  it('6. unstake()', async () => {
+  it('6. unstake early(abnormal)', async () => {
     // unstake (+1 block)
-    mining(99);
-    await bond.unstake();
-  });
-  it('7. withdraw()', async () => {
-    // withdraw delay == 93046
-    // unstake (+1 block)
-    mining(93045);
-    await bond.withdraw();
-  });
-  it('8. User1 claim()', async () => {
-    const userSigner = await getUser(1);
-    const userAddress = userSigner.address;
-
-    tbondBalance = await bond.balanceOf(userAddress);
-    await bond.connect(userSigner).claim(tbondBalance);
-    tonBalance = await ton.balanceOf(userAddress);
-    expect(parseInt(fromEth(tonBalance))).to.be.above(
-      parseInt(fromEth(tbondBalance))
-    );
-  });
-  it('9. User2 claim()', async () => {
-    const userSigner = await getUser(2);
-    const userAddress = userSigner.address;
-    tbondBalance = await bond.balanceOf(userAddress);
-    await bond.connect(userSigner).claim(tbondBalance);
-    tonBalance = await ton.balanceOf(userAddress);
-    expect(parseInt(fromEth(tonBalance))).to.be.above(
-      parseInt(fromEth(tbondBalance))
-    );
-  });
-  it('10. Admin claim()', async () => {
-    const adminSigner = await getUser(0);
-    const adminAddress = adminSigner.address;
-    tbondBalance = await bond.balanceOf(adminAddress);
-    await bond.connect(adminSigner).claim(tbondBalance);
-    tonBalance = await ton.balanceOf(adminAddress);
-    expect(parseInt(fromEth(tonBalance))).to.be.above(
-      parseInt(fromEth(tbondBalance))
-    );
-  });
-  it('11. check TON balance of TBOND contract', async () => {
-    const tonBalnace = await ton.balanceOf(bond.address);
-    expect(parseInt(fromEth(tonBalnace))).to.be.equal(0);
+    mining(98);
+    await expect(bond.unstake()).to.be.reverted;
   });
 });
