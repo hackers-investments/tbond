@@ -14,7 +14,6 @@ accounts : admin,user1,user2,user3,user4(0~4 번호 매칭됨)
 all : 채권 라이프사이클 1바퀴를 돌려주는 all in one 명령  
 money : 계정에 돈 넣기 (admin, user1, user2, user3, user4 계정이 있음)  
 balance [user] : 계정 계좌 확인  
-deploy : TBondFactory 배포  
 make fundraisingPeriod stakingPeriod targetAmount
 - 채권 생성 ex) make 100 100 10000  
 
