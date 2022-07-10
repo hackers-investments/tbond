@@ -18,7 +18,6 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
 
     address private immutable WTON;
     address private immutable FACTORY;
-    mapping(address => uint256) public nonces;
     mapping(address => mapping(uint256 => bool)) used;
     bytes32 private constant TYPEHASH =
         keccak256(
@@ -72,15 +71,6 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
         IERC20(WTON).safeTransferFrom(_msgSender(), signer, order.wtonAmount);
         unchecked {
             used[signer][order.nonce] = true;
-            nonces[signer]++;
-        }
-    }
-
-    /// @notice 사용자에게 할당된 nonce 값 업데이트
-    /// @dev 주문 취소, 가격 변경 시 nonce 값 변경 필수
-    function updateNonce() public {
-        unchecked {
-            nonces[_msgSender()]++;
         }
     }
 

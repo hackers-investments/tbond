@@ -54,11 +54,10 @@ task('sell')
       bond: args.bond,
       bondAmount: parseTon(args.bondAmount).toString(),
       wtonAmount: parsewTon(args.wtonAmount).toString(),
-      nonce: (await exchange.nonces(maker.address)).toNumber(),
+      nonce: await nonce(maker.address),
       deadline: parseInt(args.deadline) + new Date().getTime(),
     };
 
-    await exchange.updateNonce();
     const sign = getSign(
       await maker._signTypedData(domain(exchange), type, order)
     );

@@ -99,6 +99,17 @@ const utils = {
       [r, s, v]
     );
   },
+  nonce: async (addr) => {
+    let v = await get(addr);
+    if (v) {
+      v = parseInt(v) + 1;
+      await set(addr, v.toString());
+    } else {
+      v = 1;
+      await set(addr, '1');
+    }
+    return v;
+  },
 };
 
 module.exports = {
