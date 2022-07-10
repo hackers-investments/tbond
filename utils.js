@@ -15,6 +15,7 @@ const utils = {
   WTON: '0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2',
   SeigManager: '0x710936500ac59e8551331871cbad3d33d5e0d909',
   StakeRegistry: '0x4Fa71D6964a97c043CA3103407e1B3CD6b5Ab367',
+  ZeroAddress: '0x0000000000000000000000000000000000000001',
   users: ['admin', 'user1', 'user2', 'user3', 'user4'],
   abiCoder: () => ethers.utils.defaultAbiCoder,
   keccak256: () => ethers.utils.keccak256,
