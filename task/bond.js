@@ -1,33 +1,38 @@
 require('../utils.js').imports();
 
 task('money').setAction(async () => {
-  const accounts = getUser();
-  await start_impersonate(WTON);
-  await start_impersonate(SeigManager);
-  for (const addr of accounts.map((x) => x.address).concat([WTON, SeigManager]))
-    await setBalance(addr, 1000000);
-  const ton = await getContract(TON, WTON);
-  const wton = await getContract(WTON, SeigManager);
-  for (const addr of accounts.map((x) => x.address)) {
-    await ton.mint(addr, parseTon(1000000));
-    await wton.mint(addr, parsewTon(1000000));
-  }
+  const accounts = await getUser();
+  const [ton, wton] = await Promise.all([
+    getContract(TON, WTON),
+    getContract(WTON, SeigManager),
+    ...[...accounts.map((x) => x.address), WTON, SeigManager].map((x) =>
+      setBalance(x, 1000000)
+    ),
+    start_impersonate(WTON),
+    start_impersonate(SeigManager),
+  ]);
+  await Promise.all([
+    ...accounts.map((x) => ton.mint(x.address, parseTon(1000000))),
+    ...accounts.map((x) => wton.mint(x.address, parsewTon(1000000))),
+    set('money', 'on'),
+  ]);
   await stop_impersonate(WTON);
   await stop_impersonate(SeigManager);
-  await set('money', 'on');
   log('Done. everyone rich now except you!');
 });
 
 task('balance')
   .addOptionalPositionalParam('user')
   .setAction(async (args) => {
-    let accounts = getUser();
+    let accounts = await getUser();
     if (args.user) {
-      accounts = [getUser(args.user)];
+      accounts = [await getUser(args.user)];
       users = [args.user];
     }
-    const ton = await getContract(TON, ethers.provider);
-    const wton = await getContract(WTON, ethers.provider);
+    const [ton, wton] = await Promise.all([
+      getContract(TON, ethers.provider),
+      getContract(WTON, ethers.provider),
+    ]);
     log('Account List');
     for (let i = 0; i < accounts.length; i++) {
       let address = accounts[i].address;
@@ -40,7 +45,7 @@ task('balance')
 
 task('factory').setAction(async () => {
   if ((await get('money')) != 'on') await run('money');
-  const admin = getUser('admin');
+  const admin = await getUser('admin');
   let factory = await get('factory');
   if (factory) factory = await ethers.getContractAt('Factory', factory, admin);
   else {
@@ -59,13 +64,15 @@ task('make')
   .addPositionalParam('stakingPeriod')
   .addPositionalParam('targetAmount')
   .setAction(async (args) => {
-    const admin = getUser('admin');
+    const admin = await getUser('admin');
     const factory = await run('factory');
     await factory.create(StakeRegistry);
     const round = await factory.round();
-    const addr = await factory.bonds(round);
-    const bond = await getBond(round, admin);
-    const ton = await getContract(TON, admin);
+    const [addr, bond, ton] = await Promise.all([
+      factory.bonds(round),
+      getBond(round, admin),
+      getContract(TON, admin),
+    ]);
     await ton.approve(addr, parseTon(1000));
     await bond.setup(
       args.fundraisingPeriod,
@@ -79,12 +86,15 @@ task('make')
   });
 
 task('view')
-  .addPositionalParam('bond')
+  .addOptionalPositionalParam('bond')
   .addOptionalPositionalParam('user')
   .setAction(async (args) => {
-    const ton = await getContract(TON, ethers.provider);
-    const wton = await getContract(WTON, ethers.provider);
-    const bond = await getBond(args.bond);
+    if (!args.bond) return await run('list');
+    const [ton, wton, bond] = await Promise.all([
+      getContract(TON, ethers.provider),
+      getContract(WTON, ethers.provider),
+      getBond(args.bond),
+    ]);
     const stage = Number.parseInt(await bond.stage());
     if (args.now) log(`Block Now: ${await now()}`);
     log(`[${await bond.name()}]`);
@@ -111,7 +121,7 @@ task('view')
     if (args.user) {
       log(
         `TBOND-${args.bond} Balance for ${args.user}: ${fromTon(
-          await bond.balanceOf(getUser(args.user).address)
+          await bond.balanceOf((await getUser(args.user)).address)
         )}`
       );
     }
@@ -155,11 +165,13 @@ task('invest')
     else if (args.amount.endsWith('ton'))
       tonamount = parseTon(args.amount.slice(0, -3));
     else tonamount = parseTon(args.amount);
-    let user = getUser('admin');
-    if (args.user) user = getUser(args.user);
-    const bond = await getBond(args.bond, user);
-    const ton = await getContract(TON, user);
-    const wton = await getContract(WTON, user);
+    let user = await getUser('admin');
+    if (args.user) user = await getUser(args.user);
+    const [bond, ton, wton] = await Promise.all([
+      getBond(args.bond, user),
+      getContract(TON, user),
+      getContract(WTON, user),
+    ]);
     if (tonamount && wtonamount) {
       await wton.approve(bond.address, wtonamount);
       const data = abicoder().encode(['uint256'], [wtonamount]);
@@ -177,11 +189,10 @@ task('stage')
   .addPositionalParam('bond')
   .addOptionalPositionalParam('user')
   .setAction(async (args) => {
-    let user = getUser('admin');
-    if (args.user) user = getUser(args.user);
+    let user = await getUser('admin');
+    if (args.user) user = await getUser(args.user);
     const bond = await getBond(args.bond, user);
-    if (args.mode == 'stake')
-      await bond.stake((overrides = { gasLimit: 10000000 }));
+    if (args.mode == 'stake') await bond.stake({ gasLimit: 10000000 });
     if (args.mode == 'unstake') await bond.unstake();
     if (args.mode == 'withdraw') await bond.withdraw();
     await run('view', { bond: args.bond, now: 'on' });
@@ -193,7 +204,7 @@ task('claim')
   .addPositionalParam('amount')
   .addPositionalParam('user')
   .setAction(async (args) => {
-    const user = getUser(args.user);
+    const user = await getUser(args.user);
     const bond = await getBond(args.bond, user);
     if (args.mode == 'claim') await bond.claim(parseTon(args.amount));
     if (args.mode == 'refund') await bond.refund(parseTon(args.amount));

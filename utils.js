@@ -4,7 +4,6 @@ const utils = {
     'function balanceOf(address) view returns (uint)',
     'function approve(address, uint) returns (bool)',
     'function owner() view returns (address)',
-    'function transferOwnership(address)',
     'function mint(address, uint) returns (bool)',
     'function swapFromTON(uint tonAmount) public returns (bool)',
     'function swapFromTONAndTransfer(address, uint) returns (bool)',
@@ -71,18 +70,27 @@ const utils = {
     const addr = await factory.bonds(number);
     return await ethers.getContractAt('Bond', addr, signer);
   },
-  getUser: (user) => {
-    const accounts = [
-      '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-      '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
-      '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
-      '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6',
-      '0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a',
-    ].map((x) => new ethers.Wallet(x, ethers.provider));
+  getUser: async (user) => {
+    const accounts = await Promise.all(
+      [
+        '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+        '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+        '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
+        '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6',
+        '0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a',
+      ].map((x) => new ethers.Wallet(x, ethers.provider))
+    );
     if (user == undefined) return accounts;
     const index = ['admin', 'user1', 'user2', 'user3', 'user4'].indexOf(user);
     if (index == -1) return accounts[parseInt(user)];
     else return accounts[index];
+  },
+  getSign: (sig) => {
+    sig = sig.substr(2);
+    const r = '0x' + sig.slice(0, 64);
+    const s = '0x' + sig.slice(64, 128);
+    const v = parseInt('0x' + sig.slice(128, 130), 16);
+    return abicoder().encode(['uint8', 'bytes32', 'bytes32'], [v, r, s]);
   },
 };
 
