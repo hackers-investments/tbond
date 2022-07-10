@@ -5,7 +5,7 @@ check () {
   then
   echo 'running hardhat node'
   start &>/dev/null&
-  sleep 4
+  sleep 5
   echo 'done'
   fi
 }
@@ -34,5 +34,5 @@ alias sell='task sell'
 alias factory='task factory'
 alias exchange='task exchange'
 alias auction='task auction'
-alias trade='stop;make 10 10 1000;invest 1 20 1;sell 1 20 40 10000 1'
+alias trade='stop;make 10 10 1000;invest 1 20 1;sell 1 20 40 3600 user1'
 alias all='stop;list;mine;stake 1;mine;unstake 1;mine 100000;withdraw 1;view 1 admin;claim 1 1000 admin;balance admin'

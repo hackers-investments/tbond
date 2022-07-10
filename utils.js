@@ -93,7 +93,10 @@ const utils = {
     const r = '0x' + sig.slice(0, 64);
     const s = '0x' + sig.slice(64, 128);
     const v = parseInt('0x' + sig.slice(128, 130), 16);
-    return abiCoder().encode(['uint8', 'bytes32', 'bytes32'], [v, r, s]);
+    return ethers.utils.solidityPack(
+      ['bytes32', 'bytes32', 'uint8'],
+      [r, s, v]
+    );
   },
 };
 

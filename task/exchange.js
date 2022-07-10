@@ -1,10 +1,10 @@
 require('../utils.js').imports();
 
-const domain = (ex) => ({
+const domain = (exchange) => ({
   name: 'TBond Exchange',
   version: '1.0',
   chainId: ethers.provider._network.chainId,
-  verifyingContract: ex.address,
+  verifyingContract: exchange.address,
 });
 
 const type = {
@@ -25,10 +25,10 @@ task('exchange')
     if (args.user) user = await getUser(args.user);
     let exchange = await get('exchange');
     if (exchange)
-      exchange = await ethers.getContractAt('Exchange2', exchange, user);
+      exchange = await ethers.getContractAt('Exchange', exchange, user);
     else {
       exchange = await (
-        await ethers.getContractFactory('Exchange2', user)
+        await ethers.getContractFactory('Exchange', user)
       ).deploy(await get('factory'), WTON);
       await exchange.deployed();
       await set('exchange', exchange.address);
@@ -47,19 +47,18 @@ task('sell')
     const maker = await getUser(args.user);
     const bond = await getBond(args.bond, maker);
     const exchange = await run('exchange', { user: args.user });
-    await bond.increaseAllowance(exchange.address, args.bondAmount);
+    await bond.increaseAllowance(exchange.address, parseTon(args.bondAmount));
 
     order = {
       owner: maker.address,
       bond: args.bond,
-      bondAmount: args.bondAmount,
-      wtonAmount: args.wtonAmount,
+      bondAmount: parseTon(args.bondAmount).toString(),
+      wtonAmount: parsewTon(args.wtonAmount).toString(),
       nonce: (await exchange.nonces(maker.address)).toNumber(),
-      deadline: args.deadline,
+      deadline: parseInt(args.deadline) + new Date().getTime(),
     };
 
     await exchange.updateNonce();
-
     const sign = getSign(
       await maker._signTypedData(domain(exchange), type, order)
     );
@@ -79,9 +78,10 @@ task('auction').setAction(async () => {
     log(`Order Number ${i}`);
     log(`Maker : ${tradeData[i].order.owner}`);
     log(`Bond : TBOND-${tradeData[i].order.bond}`);
-    log(`Amount : ${tradeData[i].order.bondAmount}`);
-    log(`Price : ${tradeData[i].order.wtonAmount} wton`);
+    log(`Amount : ${fromTon(tradeData[i].order.bondAmount)}`);
+    log(`Price : ${fromwTon(tradeData[i].order.wtonAmount)}`);
     log(`End : ${tradeData[i].order.deadline}`);
+    log(`Sign : ${tradeData[i].sign}`);
     if (i != tradeData) log('='.repeat(51));
   }
 });
@@ -113,5 +113,9 @@ task('buy')
     );
     const wton = await getContract(WTON, taker);
     await wton.increaseAllowance(exchange.address, order.wtonAmount);
-    log(await exchange.executeOrder(order, data.sign, proof));
+    await exchange.executeOrder(order, data.sign, proof);
+    await set(
+      'tradeData',
+      JSON.stringify(tradeData.filter((x) => x.sign != data.sign))
+    );
   });
