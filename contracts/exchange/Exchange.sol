@@ -74,6 +74,17 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
         }
     }
 
+    /// @notice 주문 취소
+    /// @param order 주문 데이터
+    /// @param sign 서명
+    function cancelOrder(Order memory order, bytes calldata sign) external {
+        address signer = signOrder(order).recover(sign);
+        require(signer == order.owner, "Invalid signature");
+        unchecked {
+            used[signer][order.nonce] = true;
+        }
+    }
+
     /// @notice 주문 정보를 사인
     function signOrder(Order memory order) private view returns (bytes32) {
         return

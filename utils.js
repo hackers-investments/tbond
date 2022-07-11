@@ -9,7 +9,8 @@ const utils = {
     'function swapFromTONAndTransfer(address, uint) returns (bool)',
     'function bondInfo() view returns (uint, uint , uint , uint)',
     'function approveAndCall(address, uint, bytes)',
-    'function increaseAllowance(address, uint) returns (bool)',
+    'function increaseAllowance(address, uint)',
+    'function decreaseAllowance(address, uint256)',
   ],
   TON: '0x2be5e8c109e2197D077D13A82dAead6a9b3433C5',
   WTON: '0xc4A11aaf6ea915Ed7Ac194161d2fC9384F15bff2',
@@ -74,18 +75,19 @@ const utils = {
     return await ethers.getContractAt('Bond', addr, signer);
   },
   names: ['admin', 'user1', 'user2', 'user3', 'user4'],
+  pkeys: [
+    '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
+    '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
+    '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
+    '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6',
+    '0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a',
+  ],
   getUser: async (user) => {
     const accounts = await Promise.all(
-      [
-        '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
-        '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d',
-        '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a',
-        '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6',
-        '0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a',
-      ].map((x) => new ethers.Wallet(x, ethers.provider))
+      pkeys.map((x) => new ethers.Wallet(x, ethers.provider))
     );
     if (user == undefined) return accounts;
-    const index = names.indexOf(user);
+    index = names.indexOf(user);
     if (index == -1) return accounts[parseInt(user)];
     else return accounts[index];
   },

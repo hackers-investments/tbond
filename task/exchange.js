@@ -44,11 +44,11 @@ task('sell')
   .addPositionalParam('deadline')
   .addPositionalParam('user')
   .setAction(async (args) => {
+    // 채권 밸런스 체크 같은 것은 프론트에서 제대로 구현하자!
     const maker = await getUser(args.user);
     const bond = await getBond(args.bond, maker);
     const exchange = await run('exchange', { user: args.user });
     await bond.increaseAllowance(exchange.address, parseTon(args.bondAmount));
-
     order = {
       owner: maker.address,
       bond: args.bond,
@@ -57,14 +57,13 @@ task('sell')
       nonce: await nonce(maker.address),
       deadline: parseInt(args.deadline) + new Date().getTime(),
     };
-
     const sign = getSign(
       await maker._signTypedData(domain(exchange), type, order)
     );
     let tradeData = await get('tradeData');
     if (tradeData) tradeData = JSON.parse(tradeData);
     else tradeData = [];
-    tradeData.push({ order: order, sign: sign });
+    tradeData.push({ order: order, sign: sign, user: args.user });
     await set('tradeData', JSON.stringify(tradeData));
     await run('auction');
   });
@@ -117,4 +116,28 @@ task('buy')
       'tradeData',
       JSON.stringify(tradeData.filter((x) => x.sign != data.sign))
     );
+  });
+
+task('cancel')
+  .addPositionalParam('order')
+  .setAction(async (args) => {
+    // 거래 데이터 유무 등 검증은 프론트에서 하자!
+    let tradeData = await get('tradeData');
+    if (tradeData) tradeData = JSON.parse(tradeData);
+    else tradeData = [];
+    const data = tradeData[parseInt(args.order)];
+    if (!data) return log('Order not found!');
+    const order = data.order;
+    const exchange = await run('exchange', { user: data.user });
+    const maker = await getUser(data.user);
+    const bond = await getBond(order.bond, maker);
+    await bond.decreaseAllowance(exchange.address, order.bondAmount);
+    await nonce(order.owner);
+    await exchange.cancelOrder(order, data.sign);
+    await set(
+      'tradeData',
+      JSON.stringify(tradeData.filter((x) => x.sign != data.sign))
+    );
+    log(`Cancel order #${args.order}!`);
+    await run('auction');
   });
