@@ -22,11 +22,11 @@ describe('Test for BOND contract(with small deposit)', () => {
       const signer = signers[idx];
       const address = signer.address;
 
+      const wtonBalance = await wton.balanceOf(address);
+      await wton.connect(signer).swapToTON(wtonBalance);
+
       const tonBalance = await ton.balanceOf(address);
       ton.connect(signer).transfer(ZeroAddress, tonBalance);
-
-      const wtonBalance = await wton.balanceOf(address);
-      wton.connect(signer).transfer(ZeroAddress, wtonBalance);
     }
   });
   it('1. deploy TBOND', async () => {
