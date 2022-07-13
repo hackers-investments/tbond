@@ -69,9 +69,7 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
         require(block.timestamp < order.deadline, "Order expired");
         IERC20(bond).safeTransferFrom(signer, _msgSender(), order.bondAmount);
         IERC20(WTON).safeTransferFrom(_msgSender(), signer, order.wtonAmount);
-        unchecked {
-            used[signer][order.nonce] = true;
-        }
+        used[signer][order.nonce] = true;
     }
 
     /// @notice 주문 취소
@@ -80,9 +78,7 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
     function cancelOrder(Order memory order, bytes calldata sign) external {
         address signer = signOrder(order).recover(sign);
         require(signer == order.owner, "Invalid signature");
-        unchecked {
-            used[signer][order.nonce] = true;
-        }
+        used[signer][order.nonce] = true;
     }
 
     /// @notice 주문 정보를 사인
