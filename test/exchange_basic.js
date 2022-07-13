@@ -115,15 +115,22 @@ describe('Test for TBOND Exchange(basic)', () => {
           order.bond,
           order.bondAmount,
           order.wtonAmount,
-          order.deadline,
           order.nonce,
+          order.deadline
         ]
       )
     );
 
-    // WTON으로 TBOND를 매수하기 위해 거래소에 approve(approveAndCall로 대체할 예정)
-    await wton.connect(user2Signer).increaseAllowance(exchange.address, order.wtonAmount);
-    await exchange.connect(user2Signer).executeOrder(order, sign, proof);
+    const data = abiCoder().encode(
+      ['address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes', 'bytes32'],
+      [
+        order.owner, order.bond, order.bondAmount,
+        order.wtonAmount, order.nonce, order.deadline,
+        sign, proof
+      ]
+    );
+
+    await wton.connect(user2Signer).approveAndCall(exchange.address, order.wtonAmount, data, overrides = { gasLimit: 2400000 });
 
     const user2TbondBalance = parseInt(fromTon(await bond.balanceOf(user2Address)));
     const user1WtonBalance = parseInt(fromwTon(await wton.balanceOf(user1Address)));
