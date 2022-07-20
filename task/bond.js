@@ -95,7 +95,6 @@ task('view')
       getContract(WTON, ethers.provider),
       getBond(args.bond),
     ]);
-    const stage = Number.parseInt(await bond.stage());
     if (args.now) log(`Block Now: ${await now()}`);
     log(`[${await bond.name()}]`);
     const [
@@ -103,7 +102,9 @@ task('view')
       stakable,
       unstakeable,
       withdrawable,
-    ] = await bond.bondInfo();
+      totalSupply,
+      stage,
+    ] = await bond.info();
     log(
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
     );
@@ -114,7 +115,7 @@ task('view')
         )
       )}`
     );
-    log(`Bond: ${fromTon(await bond.totalSupply())}`);
+    log(`Bond: ${fromTon(totalSupply)}`);
     log(`Stakable: ${stakable}`);
     log(`Unstakeable: ${unstakeable}`);
     log(`Withdrawable: ${withdrawable}`);

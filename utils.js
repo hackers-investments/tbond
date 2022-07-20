@@ -8,7 +8,7 @@ const utils = {
     'function swapFromTON(uint) public returns (bool)',
     'function swapFromTONAndTransfer(address, uint) returns (bool)',
     'function swapToTON(uint256) returns (bool)',
-    'function bondInfo() view returns (uint, uint , uint , uint)',
+    'function info() view returns (uint, uint , uint , uint, uint, uint)',
     'function approveAndCall(address, uint, bytes)',
     'function increaseAllowance(address, uint)',
     'function decreaseAllowance(address, uint256)',
