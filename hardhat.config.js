@@ -15,6 +15,7 @@ module.exports = {
         url: `https://mainnet.infura.io/v3/${process.env.INFURA_KEY}`,
         blockNumber: 15000000,
       },
+	  chainId: 0x1337,
     },
   },
   solidity: {
