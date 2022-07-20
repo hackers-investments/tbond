@@ -103,7 +103,7 @@ describe('Test for TBOND Exchange(multi order)', () => {
     const sign1 = getSign(
       await user1Signer._signTypedData(domain(exchange), type, order1)
     );
-    await bond.increaseAllowance(exchange.address, order1.bondAmount);
+    await increaseAllowance(bond, user1Signer, exchange.address, ethers.BigNumber.from(order1.bondAmount));
 
     // 두번째 주문 데이터 생성 및 TBOND를 Exchange 컨트랙트에 위임
     const order2 = {
@@ -117,7 +117,7 @@ describe('Test for TBOND Exchange(multi order)', () => {
     const sign2 = getSign(
       await user1Signer._signTypedData(domain(exchange), type, order2)
     );
-    await bond.increaseAllowance(exchange.address, order2.bondAmount);
+    await increaseAllowance(bond, user1Signer, exchange.address, ethers.BigNumber.from(order2.bondAmount));
 
     // storage를 절약하기 위해 매수자의 경우 order의 해시값만 전달하고,
     // 컨트랙트에서 order를 해시한 값과 매수자가 전달한 해시값이 일치하는지 확인
@@ -150,11 +150,11 @@ describe('Test for TBOND Exchange(multi order)', () => {
     );
 
     // 첫번째 TBOND 매수
-    await wton.connect(user2Signer).increaseAllowance(exchange.address, order1.wtonAmount);
+    await increaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order2.wtonAmount));
     await exchange.connect(user2Signer).executeOrder(order1, sign1, proof1);
 
     // 두번째 TBOND 매수
-    await wton.connect(user2Signer).increaseAllowance(exchange.address, order2.wtonAmount);
+    await increaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order2.wtonAmount));
     await exchange.connect(user2Signer).executeOrder(order2, sign2, proof2);
 
     const user2TbondBalance = parseInt(fromTon(await bond.balanceOf(user2Address)));

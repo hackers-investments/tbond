@@ -3,6 +3,7 @@ const utils = {
     'function transfer(address, uint) returns (bool)',
     'function balanceOf(address) view returns (uint)',
     'function approve(address, uint) returns (bool)',
+    'function allowance(address, address) view returns (uint)',
     'function owner() view returns (address)',
     'function mint(address, uint) returns (bool)',
     'function swapFromTON(uint) public returns (bool)',
@@ -32,6 +33,14 @@ const utils = {
   fromEth: (v) => fromTon(v),
   fromwTon: (v) => ethers.utils.formatUnits(ethers.BigNumber.from(v), 27),
   mining: (n) => ethers.provider.send('hardhat_mine', [`0x${n.toString(16)}`]),
+  increaseAllowance: async (a, s, e, v) => {
+    const k = await a.allowance(s.address, e);
+    await a.connect(s).approve(e, k.add(v));
+  },
+  decreaseAllowance: async (a, s, e, v) => {
+    const k = await a.allowance(s.address, e);
+    await a.connect(s).approve(e, k.sub(v));
+  },
   setBalance: (a, v) =>
     ethers.provider.send('hardhat_setBalance', [a, hex(parseEth(v))]),
   getBalance: (a) => ethers.provider.getBalance(a),

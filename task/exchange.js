@@ -48,7 +48,7 @@ task('sell')
     const maker = await getUser(args.user);
     const bond = await getBond(args.bond, maker);
     const exchange = await run('exchange', { user: args.user });
-    await bond.increaseAllowance(exchange.address, parseTon(args.bondAmount));
+    await increaseAllowance(bond, maker, exchange.address, parseTon(args.bondAmount));
     order = {
       owner: maker.address,
       bond: args.bond,
@@ -131,7 +131,7 @@ task('cancel')
     const exchange = await run('exchange', { user: data.user });
     const maker = await getUser(data.user);
     const bond = await getBond(order.bond, maker);
-    await bond.decreaseAllowance(exchange.address, order.bondAmount);
+    await decreaseAllowance(bond, maker, exchange.address, ethers.BigNumber.from(order.bondAmount));
     await nonce(order.owner);
     await exchange.cancelOrder(order, data.sign);
     await set(

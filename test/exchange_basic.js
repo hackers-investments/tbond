@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+const utils = require('../utils.js');
 
 require('../utils.js').imports();
 
@@ -102,8 +103,9 @@ describe('Test for TBOND Exchange(basic)', () => {
     const sign = getSign(
       await user1Signer._signTypedData(domain(exchange), type, order)
     );
-    // TBOND를 판매하기 위해 거래소에 approve
-    await bond.increaseAllowance(exchange.address, order.bondAmount);
+
+    // 판매할 TBOND를 Exchange 컨트랙트에 approve
+    await increaseAllowance(bond, user1Signer, exchange.address, ethers.BigNumber.from(order.bondAmount));
 
     // storage를 절약하기 위해 매수자의 경우 order의 해시값만 전달하고,
     // 컨트랙트에서 order를 해시한 값과 매수자가 전달한 해시값이 일치하는지 확인
@@ -121,13 +123,20 @@ describe('Test for TBOND Exchange(basic)', () => {
       )
     );
 
-    // WTON으로 TBOND를 매수하기 위해 거래소에 approve(approveAndCall로 대체할 예정)
-    await wton.connect(user2Signer).increaseAllowance(exchange.address, order.wtonAmount);
+    // TBOND 구매에 사용할 WTON을 거래소에 approve
+    await increaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order.wtonAmount));
+
+    // TBOND와 WTON 교환
     await exchange.connect(user2Signer).executeOrder(order, sign, proof);
 
     const user2TbondBalance = parseInt(fromTon(await bond.balanceOf(user2Address)));
     const user1WtonBalance = parseInt(fromwTon(await wton.balanceOf(user1Address)));
     expect(user2TbondBalance).to.be.equal(1000);
     expect(user1WtonBalance).to.be.equal(1000);
+
+    const user1TbondApproved = (await bond.allowance(user1Signer.address, exchange.address)).toNumber();
+    const user2WtonApproved = (await wton.allowance(user2Signer.address, exchange.address)).toNumber();
+    expect(user1TbondApproved).to.be.equal(0);
+    expect(user2WtonApproved).to.be.equal(0);
   });
 });
