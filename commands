@@ -1,7 +1,7 @@
 alias start='npx hardhat node --hostname 0.0.0.0'
 alias stop='pkill -KILL -f "hardhat"'
 check () {
-  if [[ ! `pgrep 'npm exec hardhat node'` ]]
+  if [[ ! `pgrep 'npm exec'` ]]
   then
   echo 'running hardhat node'
   start &>/dev/null&

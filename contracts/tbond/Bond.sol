@@ -265,7 +265,7 @@ contract Bond is Ownable, ERC20, OnApprove {
     }
 
     /// @notice 채권의 상태 정보 반환
-    function bondInfo()
+    function info()
         external
         view
         returns (
@@ -273,7 +273,8 @@ contract Bond is Ownable, ERC20, OnApprove {
             uint256,
             uint256,
             uint256,
-            uint256
+            uint256,
+            FundStage
         )
     {
         return (
@@ -281,7 +282,8 @@ contract Bond is Ownable, ERC20, OnApprove {
             stakable,
             unstakeable,
             withdrawable,
-            totalSupply()
+            totalSupply(),
+            stage
         );
     }
 
