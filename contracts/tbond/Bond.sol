@@ -21,19 +21,16 @@ contract Bond is Ownable, ERC20, OnApprove {
     address private immutable WTON;
     address private immutable DEPOSIT_MANAGER;
     uint256 private constant INITIAL_DEPOSIT_TON = 1000e18;
-    // FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량(1000TON)
     address private constant LAYER2OPERATOR =
         0x5d9a0646c46245A8a3B4775aFB3c54d07BCB1764;
     uint256 private exchangeRate = 1e18;
-    // withdraw() method에서 staking 후 돌려받은 TON에 따라 교환 비율이 변경됨
     uint256 private targetAmount;
     uint256 private stakingPeriod;
     uint256 private withdrawable;
     uint256 private unstakeable;
     uint256 private stakable;
-    // FundManager가 동작하기 위해 owner가 예치해야하는 최소한의 TON 수량
     address private incentiveTo;
-    // 인센티브를 지급할 주소
+    uint256 private total;
 
     enum FundStage {
         NONE,
@@ -134,11 +131,22 @@ contract Bond is Ownable, ERC20, OnApprove {
                     address(this),
                     amountWton
                 );
-                _mint(sender, toWAD(amountWton) + amount);
-            } else _mint(sender, amount);
+                unchecked {
+                    _mint(sender, toWAD(amountWton) + amount);
+                    total += toWAD(amountWton) + amount;
+                }
+            } else {
+                unchecked {
+                    _mint(sender, amount);
+                    total += amount;
+                }
+            }
         } else {
             IERC20(WTON).safeTransferFrom(sender, address(this), amount);
             _mint(sender, toWAD(amount));
+            unchecked {
+                total += toWAD(amount);
+            }
         }
 
         return true;
@@ -273,8 +281,8 @@ contract Bond is Ownable, ERC20, OnApprove {
             uint256,
             uint256,
             uint256,
-            uint256,
-            FundStage
+            FundStage,
+            uint256
         )
     {
         return (
@@ -282,8 +290,8 @@ contract Bond is Ownable, ERC20, OnApprove {
             stakable,
             unstakeable,
             withdrawable,
-            totalSupply(),
-            stage
+            stage,
+            total
         );
     }
 

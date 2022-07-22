@@ -102,8 +102,8 @@ task('view')
       stakable,
       unstakeable,
       withdrawable,
-      totalSupply,
       stage,
+      total,
     ] = await bond.info();
     log(
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
@@ -115,7 +115,7 @@ task('view')
         )
       )}`
     );
-    log(`Bond: ${fromTon(totalSupply)}`);
+    log(`Bond: ${fromTon(total)}`);
     log(`Stakable: ${stakable}`);
     log(`Unstakeable: ${unstakeable}`);
     log(`Withdrawable: ${withdrawable}`);
