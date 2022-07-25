@@ -104,6 +104,7 @@ task('view')
       withdrawable,
       stage,
       total,
+      stakingPeriod,
     ] = await bond.info();
     log(
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
