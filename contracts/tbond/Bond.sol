@@ -282,6 +282,7 @@ contract Bond is Ownable, ERC20, OnApprove {
             uint256,
             uint256,
             FundStage,
+            uint256,
             uint256
         )
     {
@@ -291,7 +292,8 @@ contract Bond is Ownable, ERC20, OnApprove {
             unstakeable,
             withdrawable,
             stage,
-            total
+            total,
+            stakingPeriod
         );
     }
 
