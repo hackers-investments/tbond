@@ -247,6 +247,7 @@ contract Bond is Ownable, ERC20, OnApprove {
         uint256 tonBalance = IERC20(TON).balanceOf(address(this));
         if (tonBalance < amount)
             IWTON(WTON).swapToTON(IERC20(WTON).balanceOf(address(this)));
+        total -= amount;
         _burn(_msgSender(), amount);
         IERC20(TON).safeTransfer(_msgSender(), amount);
     }
