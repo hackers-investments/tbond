@@ -96,7 +96,10 @@ contract Bond is Ownable, ERC20, OnApprove {
             address(this),
             INITIAL_DEPOSIT_TON
         );
-        _mint(owner(), INITIAL_DEPOSIT_TON);
+        unchecked {
+            _mint(owner(), INITIAL_DEPOSIT_TON);
+            total += INITIAL_DEPOSIT_TON;
+        }
         // 채권 생성 시 관리자가 필수 참여하도록 설계
         // 관리자는 setup 호출 전 INITIAL_DEPOSIT 만큼 ton 토큰을 approve 해줘야 함
         unchecked {
