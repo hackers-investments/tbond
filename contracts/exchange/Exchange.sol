@@ -6,13 +6,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import {OnApprove} from "../lib/OnApprove.sol";
 
 interface IFactory {
     function bonds(uint256) external view returns (address);
 }
 
 /// @title TBond 채권 거래소
-contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
+contract Exchange is Context, OnApprove, EIP712("TBond Exchange", "1.0") {
     using ECDSA for bytes32;
     using SafeERC20 for IERC20;
 
@@ -38,20 +39,55 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
         WTON = wton;
     }
 
+    function decodeOnApprove(bytes calldata data)
+        internal
+        pure
+        returns (
+            Order memory order,
+            bytes memory sign,
+            bytes32 proof
+        )
+    {
+        (order, sign, proof) = abi.decode(data, (Order, bytes, bytes32));
+    }
+
+    /// @notice 사용자의 지갑에서 TON / WTON을 출금하고 TBOND 발행
+    /// @dev WTON의 approveAndCallback에 의해 호출되는 함수
+    /// @param sender 사용자 지갑 주소
+    /// @param spender TBOND 주소
+    /// @param amount WTON 토큰 총량(onApprove를 호출한 컨트랙트에 따라 달라짐)
+    /// @param data executeOrder를 호출하는데 사용되는 데이터
+    function onApprove(
+        address sender,
+        address spender,
+        uint256 amount,
+        bytes calldata data
+    ) external override returns (bool ok) {
+        Order memory order;
+        bytes memory sign;
+        bytes32 proof;
+
+        (order, sign, proof) = decodeOnApprove(data);
+        executeOrder(sender, order, sign, proof);
+
+        return true;
+    }
+
     /// @notice 거래 실행
     /// @param order 주문 데이터
     /// @param sign 서명
     /// @param proof 검증 데이터
     function executeOrder(
+        address sender,
         Order memory order,
-        bytes calldata sign,
+        bytes memory sign,
         bytes32 proof
-    ) external {
+    ) public {
         require(
             used[order.owner][order.nonce] == false &&
                 keccak256(
                     abi.encode(
-                        _msgSender(),
+                        sender,
                         order.bond,
                         order.bondAmount,
                         order.wtonAmount,
@@ -67,8 +103,8 @@ contract Exchange is Context, EIP712("TBond Exchange", "1.0") {
         address signer = signOrder(order).recover(sign);
         require(signer == order.owner, "Invalid signature");
         require(block.timestamp < order.deadline, "Order expired");
-        IERC20(bond).safeTransferFrom(signer, _msgSender(), order.bondAmount);
-        IERC20(WTON).safeTransferFrom(_msgSender(), signer, order.wtonAmount);
+        IERC20(bond).safeTransferFrom(signer, sender, order.bondAmount);
+        IERC20(WTON).safeTransferFrom(sender, signer, order.wtonAmount);
         used[signer][order.nonce] = true;
     }
 

@@ -126,10 +126,19 @@ describe('Test for TBOND Exchange(abnormal)', () => {
     // order를 취소하는 트랜잭션 전송
     await exchange.cancelOrder(order, sign);
 
-    // WTON으로 TBOND를 매수하기 위해 거래소에 approve(approveAndCall로 대체할 예정)
-    await increaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order.wtonAmount));
-    await expect(exchange.connect(user2Signer).executeOrder(order, sign, proof)).to.be.revertedWith('Invalid order');
-    await decreaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order.wtonAmount));
+    // TBOND 매수 트랜잭션 전송
+    const data = abiCoder().encode(
+      ['address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes', 'bytes32'],
+      [
+        order.owner, order.bond, order.bondAmount,
+        order.wtonAmount, order.nonce, order.deadline,
+        sign, proof
+      ]
+    );
+
+    await expect(
+      wton.connect(user2Signer).approveAndCall(exchange.address, order.wtonAmount, data, overrides = { gasLimit: 2400000 })
+    ).to.be.revertedWith('Invalid order');
   });
   it('4. try to exchange with small amount of WTON(abnormal)', async () => {
     order = {
@@ -163,10 +172,19 @@ describe('Test for TBOND Exchange(abnormal)', () => {
         ]
       )
     );
-    // WTON으로 TBOND를 매수하기 위해 거래소에 approve(approveAndCall로 대체할 예정)
-    await increaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order.wtonAmount));
-    await expect(exchange.connect(user2Signer).executeOrder(order, sign, proof)).to.be.revertedWith('Invalid order');
-    await decreaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order.wtonAmount));
+    // TBOND 매수 트랜잭션 전송
+    const data = abiCoder().encode(
+      ['address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes', 'bytes32'],
+      [
+        order.owner, order.bond, order.bondAmount,
+        order.wtonAmount, order.nonce, order.deadline,
+        sign, proof
+      ]
+    );
+
+    await expect(
+      wton.connect(user2Signer).approveAndCall(exchange.address, order.wtonAmount, data, overrides = { gasLimit: 2400000 })
+    ).to.be.revertedWith('Invalid order');
   });
   it('5. try to exchange with big amount of WTON(abnormal)', async () => {
     // TBOND를 판매하기 위해 거래소에 approve
@@ -187,10 +205,19 @@ describe('Test for TBOND Exchange(abnormal)', () => {
         ]
       )
     );
-    // WTON으로 TBOND를 매수하기 위해 거래소에 approve
-    await increaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order.wtonAmount));
-    await expect(exchange.connect(user2Signer).executeOrder(order, sign, proof)).to.be.revertedWith('Invalid order');
-    await decreaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order.wtonAmount));
+    // TBOND 매수 트랜잭션 전송
+    const data = abiCoder().encode(
+      ['address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes', 'bytes32'],
+      [
+        order.owner, order.bond, order.bondAmount,
+        order.wtonAmount, order.nonce, order.deadline,
+        sign, proof
+      ]
+    );
+
+    await expect(
+      wton.connect(user2Signer).approveAndCall(exchange.address, order.wtonAmount, data, overrides = { gasLimit: 2400000 })
+    ).to.be.revertedWith('Invalid order');
   });
   it('6. Exchange 1000 TBOND & 1000 WTON', async () => {
     // TBOND를 판매하기 위해 거래소에 approve
@@ -211,9 +238,17 @@ describe('Test for TBOND Exchange(abnormal)', () => {
         ]
       )
     );
-    // WTON으로 TBOND를 매수하기 위해 거래소에 approve(approveAndCall로 대체할 예정)
-    await wton.connect(user2Signer).increaseAllowance(exchange.address, order.wtonAmount);
-    await exchange.connect(user2Signer).executeOrder(order, sign, proof);
+    // TBOND 매수 트랜잭션 전송
+    const data = abiCoder().encode(
+      ['address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes', 'bytes32'],
+      [
+        order.owner, order.bond, order.bondAmount,
+        order.wtonAmount, order.nonce, order.deadline,
+        sign, proof
+      ]
+    );
+
+    await wton.connect(user2Signer).approveAndCall(exchange.address, order.wtonAmount, data, overrides = { gasLimit: 2400000 });
   });
   it('7. try to exchange with re-used sign(abnormal)', async () => {
     // TBOND를 판매하기 위해 거래소에 approve
@@ -234,9 +269,18 @@ describe('Test for TBOND Exchange(abnormal)', () => {
         ]
       )
     );
-    // WTON으로 TBOND를 매수하기 위해 거래소에 approve(approveAndCall로 대체할 예정)
-    await increaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order.wtonAmount));
-    await expect(exchange.connect(user2Signer).executeOrder(order, sign, proof)).to.be.revertedWith('Invalid order');
-    await decreaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order.wtonAmount));
+    // TBOND 매수 트랜잭션 전송
+    const data = abiCoder().encode(
+      ['address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes', 'bytes32'],
+      [
+        order.owner, order.bond, order.bondAmount,
+        order.wtonAmount, order.nonce, order.deadline,
+        sign, proof
+      ]
+    );
+
+    await expect(
+      wton.connect(user2Signer).approveAndCall(exchange.address, order.wtonAmount, data, overrides = { gasLimit: 2400000 })
+    ).to.be.revertedWith('Invalid order');
   });
 });

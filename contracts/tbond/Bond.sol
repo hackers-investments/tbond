@@ -10,7 +10,7 @@ import {IWTON} from "../interfaces/IWTON.sol";
 import {ICandidate} from "../interfaces/ICandidate.sol";
 import {IDepositManager} from "../interfaces/IDepositManager.sol";
 import {ITokamakRegistry} from "../interfaces/ITokamakRegistry.sol";
-import {OnApprove} from "./OnApprove.sol";
+import {OnApprove} from "../lib/OnApprove.sol";
 
 /// @title TON/WTON 토큰을 모아서 스테이킹하고 리워드를 분배하는 채권 컨트랙트
 /// @author Jeongun Baek (blackcow@hackersinvestments.com)
