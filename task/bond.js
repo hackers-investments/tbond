@@ -23,7 +23,7 @@ task('money')
       ...accounts.map((x) => ton.mint(x.address, parseTon(1000000))),
       ...accounts.map((x) => wton.mint(x.address, parsewTon(1000000))),
       ...addr.map((x) => ton.mint(x, parseTon(1000000))),
-      ...addr.map((x) => wton.mint(x, parseTon(1000000))),
+      ...addr.map((x) => wton.mint(x, parsewTon(1000000))),
       set('money', 'on'),
     ]);
     await stop_impersonate(WTON);
