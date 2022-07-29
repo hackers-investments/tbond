@@ -1,25 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.15;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {OnApproveUpgradeable} from "../lib/OnApproveUpgradeable.sol";
 import {ITON} from "../interfaces/ITON.sol";
 import {IWTON} from "../interfaces/IWTON.sol";
 import {ICandidate} from "../interfaces/ICandidate.sol";
 import {IDepositManager} from "../interfaces/IDepositManager.sol";
 import {ITokamakRegistry} from "../interfaces/ITokamakRegistry.sol";
-import {OnApprove} from "../lib/OnApprove.sol";
 
 /// @title TON/WTON 토큰을 모아서 스테이킹하고 리워드를 분배하는 채권 컨트랙트
 /// @author Jeongun Baek (blackcow@hackersinvestments.com)
 /// @dev [TODO] ERC20PresetMinterPauser 코드에서 필요없는 코드를 제거하고, 우리 필요한 기능만 넣어서 최적화하는 작업 필요
-contract Bond is Ownable, ERC20, OnApprove {
-    using SafeERC20 for IERC20;
-    address private immutable TON;
-    address private immutable WTON;
-    address private immutable DEPOSIT_MANAGER;
+contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    address private TON;
+    address private WTON;
+    address private DEPOSIT_MANAGER;
     uint256 private constant INITIAL_DEPOSIT_TON = 1000e18;
     address private constant LAYER2OPERATOR =
         0x5d9a0646c46245A8a3B4775aFB3c54d07BCB1764;
@@ -42,23 +43,6 @@ contract Bond is Ownable, ERC20, OnApprove {
     }
     FundStage public stage;
 
-    /// @param registry    Tokamak Network의 정보가 저장된 컨트랙트(TONStarter의 StakeRegistry)
-    /// @param name         TBOND 토큰의 이름
-    constructor(address registry, string memory name)
-        nonZeroAddress(registry)
-        ERC20(name, "TBOND")
-    {
-        (TON, WTON, DEPOSIT_MANAGER, , ) = ITokamakRegistry(registry)
-            .getTokamak();
-
-        require(
-            TON != address(0) &&
-                WTON != address(0) &&
-                DEPOSIT_MANAGER != address(0),
-            "tokamak network error"
-        );
-    }
-
     modifier nonZero(uint256 value) {
         require(value > 0, "no zero");
         _;
@@ -72,6 +56,25 @@ contract Bond is Ownable, ERC20, OnApprove {
     modifier onlyRaisingStage() {
         require(stage == FundStage.FUNDRAISING, "not in raising stage");
         _;
+    }
+
+    function initialize(address registry, string memory name)
+        external
+        initializer
+    {
+        (TON, WTON, DEPOSIT_MANAGER, , ) = ITokamakRegistry(registry)
+            .getTokamak();
+
+        require(
+            TON != address(0) &&
+                WTON != address(0) &&
+                DEPOSIT_MANAGER != address(0),
+            "tokamak network error"
+        );
+
+        __ERC20_init(name, "TBOND");
+        __OnApprove_init();
+        __Ownable_init();
     }
 
     /// @notice 새로운 채권의 설정 정보 초기화
@@ -91,7 +94,7 @@ contract Bond is Ownable, ERC20, OnApprove {
         nonZero(_fundraisingPeriod)
         nonZeroAddress(_incentiveTo)
     {
-        IERC20(TON).safeTransferFrom(
+        IERC20Upgradeable(TON).safeTransferFrom(
             owner(),
             address(this),
             INITIAL_DEPOSIT_TON
@@ -127,9 +130,13 @@ contract Bond is Ownable, ERC20, OnApprove {
 
         if (_msgSender() == TON) {
             uint256 amountWton = _decodeApproveData(data);
-            IERC20(TON).safeTransferFrom(sender, address(this), amount);
+            IERC20Upgradeable(TON).safeTransferFrom(
+                sender,
+                address(this),
+                amount
+            );
             if (amountWton > 0) {
-                IERC20(WTON).safeTransferFrom(
+                IERC20Upgradeable(WTON).safeTransferFrom(
                     sender,
                     address(this),
                     amountWton
@@ -145,7 +152,11 @@ contract Bond is Ownable, ERC20, OnApprove {
                 }
             }
         } else {
-            IERC20(WTON).safeTransferFrom(sender, address(this), amount);
+            IERC20Upgradeable(WTON).safeTransferFrom(
+                sender,
+                address(this),
+                amount
+            );
             _mint(sender, toWAD(amount));
             unchecked {
                 total += toWAD(amount);
@@ -159,8 +170,12 @@ contract Bond is Ownable, ERC20, OnApprove {
     function stake() external onlyRaisingStage {
         unchecked {
             require(block.number >= stakable, "not reaching stakable block");
-            uint256 tonBalance = IERC20(TON).balanceOf(address(this));
-            uint256 wtonBalance = IERC20(WTON).balanceOf(address(this));
+            uint256 tonBalance = IERC20Upgradeable(TON).balanceOf(
+                address(this)
+            );
+            uint256 wtonBalance = IERC20Upgradeable(WTON).balanceOf(
+                address(this)
+            );
             uint256 totalBalance = toWAD(wtonBalance) + tonBalance;
             require(
                 totalBalance >= targetAmount,
@@ -221,9 +236,11 @@ contract Bond is Ownable, ERC20, OnApprove {
         );
         stage = FundStage.END;
         unchecked {
-            uint256 claimedAmount = IERC20(TON).balanceOf(address(this));
+            uint256 claimedAmount = IERC20Upgradeable(TON).balanceOf(
+                address(this)
+            );
             uint256 incentive = wdiv2(claimedAmount - totalSupply(), 2e19);
-            IERC20(TON).safeTransfer(incentiveTo, incentive);
+            IERC20Upgradeable(TON).safeTransfer(incentiveTo, incentive);
             exchangeRate = wdiv2(claimedAmount - incentive, totalSupply());
         }
     }
@@ -234,7 +251,10 @@ contract Bond is Ownable, ERC20, OnApprove {
     function claim(uint256 amount) external nonZero(amount) {
         require(stage == FundStage.END, "not withdrawn");
         _burn(_msgSender(), amount);
-        IERC20(TON).safeTransfer(_msgSender(), wmul2(amount, exchangeRate));
+        IERC20Upgradeable(TON).safeTransfer(
+            _msgSender(),
+            wmul2(amount, exchangeRate)
+        );
     }
 
     /// @notice amount만큼의 TBOND를 burn하고, TON 토큰 반환, 펀드 모금 단계에서 투자를 취소할 때 사용하는 함수
@@ -244,12 +264,14 @@ contract Bond is Ownable, ERC20, OnApprove {
             stage == FundStage.FUNDRAISING || stage == FundStage.CANCELED,
             "not refundable"
         );
-        uint256 tonBalance = IERC20(TON).balanceOf(address(this));
+        uint256 tonBalance = IERC20Upgradeable(TON).balanceOf(address(this));
         if (tonBalance < amount)
-            IWTON(WTON).swapToTON(IERC20(WTON).balanceOf(address(this)));
+            IWTON(WTON).swapToTON(
+                IERC20Upgradeable(WTON).balanceOf(address(this))
+            );
         total -= amount;
         _burn(_msgSender(), amount);
-        IERC20(TON).safeTransfer(_msgSender(), amount);
+        IERC20Upgradeable(TON).safeTransfer(_msgSender(), amount);
     }
 
     /// @notice 펀드 모집에 실패했을 때 TBOND의 상태를 취소 상태로 변경, 펀드 모금 단계에서만 호출 가능
@@ -273,7 +295,7 @@ contract Bond is Ownable, ERC20, OnApprove {
         uint256 amount
     ) external onlyOwner {
         require(token != TON && token != WTON);
-        IERC20(token).safeTransfer(to, amount);
+        IERC20Upgradeable(token).safeTransfer(to, amount);
     }
 
     /// @notice 채권의 상태 정보 반환
