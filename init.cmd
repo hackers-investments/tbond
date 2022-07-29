@@ -5,13 +5,13 @@ check () {
   then
   echo 'running hardhat node'
   start &>/dev/null&
-  sleep 2
+  sleep 6
   echo 'done'
   fi
 }
 alias console='npx hardhat console'
 alias compile='npx hardhat compile'
-alias task='check && sleep 2 && npx hardhat --network localhost'
+alias task='check && npx hardhat --network localhost'
 alias test='npx hardhat test'
 alias accounts=''
 alias money='task money'

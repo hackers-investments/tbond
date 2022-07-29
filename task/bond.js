@@ -100,10 +100,12 @@ task('view')
   .addOptionalPositionalParam('user')
   .setAction(async (args) => {
     if (!args.bond) return await run('list');
+    let user;
+    if (args.user) user = await getUser(args.user);
     const [ton, wton, bond] = await Promise.all([
       getContract(TON, ethers.provider),
       getContract(WTON, ethers.provider),
-      getBond(args.bond),
+      getBond(args.bond, user),
     ]);
     if (args.now) log(`Block Now: ${await now()}`);
     log(`[${await bond.name()}]`);
@@ -133,7 +135,7 @@ task('view')
     if (args.user) {
       log(
         `TBOND-${args.bond} Balance for ${args.user}: ${fromTon(
-          await bond.balanceOf((await getUser(args.user)).address)
+          await bond.bondBalanceOf()
         )}`
       );
     }

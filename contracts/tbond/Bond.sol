@@ -102,10 +102,8 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
         unchecked {
             _mint(owner(), INITIAL_DEPOSIT_TON);
             total += INITIAL_DEPOSIT_TON;
-        }
-        // 채권 생성 시 관리자가 필수 참여하도록 설계
-        // 관리자는 setup 호출 전 INITIAL_DEPOSIT 만큼 ton 토큰을 approve 해줘야 함
-        unchecked {
+            // 채권 생성 시 관리자가 필수 참여하도록 설계
+            // 관리자는 setup 호출 전 INITIAL_DEPOSIT 만큼 ton 토큰을 approve 해줘야 함
             stage = FundStage.FUNDRAISING;
             targetAmount = _targetAmount;
             stakingPeriod = _stakingPeriod;
@@ -126,7 +124,7 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
         uint256 amount,
         bytes calldata data
     ) external override onlyRaisingStage returns (bool) {
-        require(_msgSender() == TON || _msgSender() == WTON, "Invalid token");
+        require(_msgSender() == TON || _msgSender() == WTON, "invalid token");
 
         if (_msgSender() == TON) {
             uint256 amountWton = _decodeApproveData(data);
