@@ -150,12 +150,28 @@ describe('Test for TBOND Exchange(multi order)', () => {
     );
 
     // 첫번째 TBOND 매수
-    await increaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order2.wtonAmount));
-    await exchange.connect(user2Signer).executeOrder(order1, sign1, proof1);
+    const data1 = abiCoder().encode(
+      ['address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes', 'bytes32'],
+      [
+        order1.owner, order1.bond, order1.bondAmount,
+        order1.wtonAmount, order1.nonce, order1.deadline,
+        sign1, proof1
+      ]
+    );
+
+    await wton.connect(user2Signer).approveAndCall(exchange.address, order1.wtonAmount, data1, overrides = { gasLimit: 2400000 });
 
     // 두번째 TBOND 매수
-    await increaseAllowance(wton, user2Signer, exchange.address, ethers.BigNumber.from(order2.wtonAmount));
-    await exchange.connect(user2Signer).executeOrder(order2, sign2, proof2);
+    const data2 = abiCoder().encode(
+      ['address', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes', 'bytes32'],
+      [
+        order2.owner, order2.bond, order2.bondAmount,
+        order2.wtonAmount, order2.nonce, order2.deadline,
+        sign2, proof2
+      ]
+    );
+
+    await wton.connect(user2Signer).approveAndCall(exchange.address, order2.wtonAmount, data2, overrides = { gasLimit: 2400000 });
 
     const user2TbondBalance = parseInt(fromTon(await bond.balanceOf(user2Address)));
     const user1WtonBalance = parseInt(fromwTon(await wton.balanceOf(user1Address)));
