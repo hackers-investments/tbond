@@ -5,13 +5,13 @@ check () {
   then
   echo 'running hardhat node'
   start &>/dev/null&
-  sleep 5
+  sleep 2
   echo 'done'
   fi
 }
 alias console='npx hardhat console'
 alias compile='npx hardhat compile'
-alias task='check && npx hardhat --network localhost'
+alias task='check && sleep 2 && npx hardhat --network localhost'
 alias test='npx hardhat test'
 alias accounts=''
 alias money='task money'
@@ -56,4 +56,11 @@ bond() {
   view 1 admin
   claim 1 1000 admin
   balance admin
+}
+reset() { # temp command set for front dev
+  stop
+  factory
+  exchange
+  money 0x92Fb30eA18557A93cDB3a0f77796223e36FcEdDB
+  make 100 100 100
 }

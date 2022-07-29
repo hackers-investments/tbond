@@ -1,11 +1,11 @@
 # TBOND 테스트 명령
 
-- source commands 쉘 명령으로 활성화 필요.
+- source init.cmd 실행하여 활성화 필요.
 - 테스트 계정 admin, user1-4 => 0~4 번호로 매핑
 
 | Command | Description |
 | --- | --- |
-| money | 테스트 계정에 ETH, TON, WTON 충전 |
+| money [addr] | 테스트 계정에 ETH, TON, WTON 충전 |
 | balance [user] | 잔고 확인 |
 | make fundraisingPeriod stakingPeriod targetAmount | 본드 생성 |
 | view [bond] [user] | 본드 정보 출력 |

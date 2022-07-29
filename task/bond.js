@@ -1,25 +1,35 @@
 require('../utils.js').imports();
 
-task('money').setAction(async () => {
-  const accounts = await getUser();
-  const [ton, wton] = await Promise.all([
-    getContract(TON, WTON),
-    getContract(WTON, SeigManager),
-    ...[...accounts.map((x) => x.address), WTON, SeigManager].map((x) =>
-      setBalance(x, 1000000)
-    ),
-    start_impersonate(WTON),
-    start_impersonate(SeigManager),
-  ]);
-  await Promise.all([
-    ...accounts.map((x) => ton.mint(x.address, parseTon(1000000))),
-    ...accounts.map((x) => wton.mint(x.address, parsewTon(1000000))),
-    set('money', 'on'),
-  ]);
-  await stop_impersonate(WTON);
-  await stop_impersonate(SeigManager);
-  log('Done. everyone rich now except you!');
-});
+task('money')
+  .addOptionalPositionalParam('addr')
+  .setAction(async (args) => {
+    let addr = [];
+    if (args.addr) addr = args.addr.split(',').map((x) => x.trim());
+    const accounts = await getUser();
+
+    const [ton, wton] = await Promise.all([
+      getContract(TON, WTON),
+      getContract(WTON, SeigManager),
+      ...[
+        ...accounts.map((x) => x.address),
+        ...addr,
+        WTON,
+        SeigManager,
+      ].map((x) => setBalance(x, 1000000)),
+      start_impersonate(WTON),
+      start_impersonate(SeigManager),
+    ]);
+    await Promise.all([
+      ...accounts.map((x) => ton.mint(x.address, parseTon(1000000))),
+      ...accounts.map((x) => wton.mint(x.address, parsewTon(1000000))),
+      ...addr.map((x) => ton.mint(x, parseTon(1000000))),
+      ...addr.map((x) => wton.mint(x, parseTon(1000000))),
+      set('money', 'on'),
+    ]);
+    await stop_impersonate(WTON);
+    await stop_impersonate(SeigManager);
+    log('Done. everyone rich now except you!');
+  });
 
 task('balance')
   .addOptionalPositionalParam('user')
