@@ -4,7 +4,7 @@ const { expect } = chai;
 
 require('../utils.js').imports();
 
-describe('Test for BOND contract(basic)', () => {
+describe('Test for BOND contract(initialize)', () => {
     let ton;
     let wton;
     let bond;
