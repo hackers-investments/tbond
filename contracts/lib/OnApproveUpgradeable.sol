@@ -4,7 +4,7 @@ pragma solidity ^0.8.15;
 import {ERC165StorageUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165StorageUpgradeable.sol";
 
 abstract contract OnApproveUpgradeable is ERC165StorageUpgradeable {
-    function __OnApprove_init() internal {
+    function __OnApprove_init() internal onlyInitializing {
         __ERC165Storage_init();
         _registerInterface(OnApproveUpgradeable(this).onApprove.selector);
     }
