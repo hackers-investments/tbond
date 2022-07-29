@@ -48,7 +48,12 @@ task('sell')
     const maker = await getUser(args.user);
     const bond = await getBond(args.bond, maker);
     const exchange = await run('exchange', { user: args.user });
-    await increaseAllowance(bond, maker, exchange.address, parseTon(args.bondAmount));
+    await increaseAllowance(
+      bond,
+      maker,
+      exchange.address,
+      parseTon(args.bondAmount)
+    );
     order = {
       owner: maker.address,
       bond: args.bond,
@@ -110,8 +115,33 @@ task('buy')
       )
     );
     const wton = await getContract(WTON, taker);
-    await wton.increaseAllowance(exchange.address, order.wtonAmount);
-    await exchange.executeOrder(order, data.sign, proof);
+    await wton.approveAndCall(
+      exchange.address,
+      order.wtonAmount,
+      abiCoder().encode(
+        [
+          'address',
+          'uint256',
+          'uint256',
+          'uint256',
+          'uint256',
+          'uint256',
+          'bytes',
+          'bytes32',
+        ],
+        [
+          order.owner,
+          order.bond,
+          order.bondAmount,
+          order.wtonAmount,
+          order.nonce,
+          order.deadline,
+          data.sign,
+          proof,
+        ],
+        (overrides = { gasLimit: 2400000 })
+      )
+    );
     await set(
       'tradeData',
       JSON.stringify(tradeData.filter((x) => x.sign != data.sign))
@@ -131,7 +161,12 @@ task('cancel')
     const exchange = await run('exchange', { user: data.user });
     const maker = await getUser(data.user);
     const bond = await getBond(order.bond, maker);
-    await decreaseAllowance(bond, maker, exchange.address, ethers.BigNumber.from(order.bondAmount));
+    await decreaseAllowance(
+      bond,
+      maker,
+      exchange.address,
+      ethers.BigNumber.from(order.bondAmount)
+    );
     await nonce(order.owner);
     await exchange.cancelOrder(order, data.sign);
     await set(

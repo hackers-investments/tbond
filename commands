@@ -13,6 +13,7 @@ alias console='npx hardhat console'
 alias compile='npx hardhat compile'
 alias task='check && npx hardhat --network localhost'
 alias test='npx hardhat test'
+alias accounts=''
 alias money='task money'
 alias balance='task balance'
 alias make='task make'
@@ -35,5 +36,24 @@ alias cancel='task cancel'
 alias factory='task factory'
 alias exchange='task exchange'
 alias auction='task auction'
-alias trade='stop;make 10 10 1000;invest 1 20 1;sell 1 20 40 3600 user1;auction;echo buy 0 user2'
-alias all='stop;list;mine;stake 1;mine;unstake 1;mine 100000;withdraw 1;view 1 admin;claim 1 1000 admin;balance admin'
+trade() {
+  stop
+  make 10 10 1000
+  invest 1 20 user1
+  sell 1 20 40 1 user1
+  auction
+  echo buy 0 user2
+}
+bond() {
+  stop
+  list
+  mine
+  stake 1
+  mine
+  unstake 1
+  mine 100000
+  withdraw 1
+  view 1 admin
+  claim 1 1000 admin
+  balance admin
+}

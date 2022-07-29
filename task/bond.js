@@ -183,7 +183,7 @@ task('invest')
       await ton.approveAndCall(bond.address, tonamount, []);
     if (!tonamount && wtonamount)
       await wton.approveAndCall(bond.address, wtonamount, []);
-    await run('view', { bond: args.bond, now: 'on' });
+    await run('view', { bond: args.bond, user: args.user, now: 'on' });
   });
 
 task('stage')
