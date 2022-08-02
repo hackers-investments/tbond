@@ -102,11 +102,7 @@ task('view')
     if (!args.bond) return await run('list');
     let user;
     if (args.user) user = await getUser(args.user);
-    const [ton, wton, bond] = await Promise.all([
-      getContract(TON, ethers.provider),
-      getContract(WTON, ethers.provider),
-      getBond(args.bond, user),
-    ]);
+    const bond = await getBond(args.bond, user);
     if (args.now) log(`Block Now: ${await now()}`);
     log(`[${await bond.name()}]`);
     const [
@@ -116,8 +112,6 @@ task('view')
       withdrawable,
       stage,
       total,
-      stakingPeriod,
-      created,
     ] = await bond.info();
     log(
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`

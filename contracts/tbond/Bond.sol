@@ -18,6 +18,8 @@ import {ITokamakRegistry} from "../interfaces/ITokamakRegistry.sol";
 /// @dev [TODO] ERC20PresetMinterPauser 코드에서 필요없는 코드를 제거하고, 우리 필요한 기능만 넣어서 최적화하는 작업 필요
 contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    mapping(address => bool) private hold;
+    uint256 private holder;
     address private TON;
     address private WTON;
     address private DEPOSIT_MANAGER;
@@ -163,6 +165,7 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
             }
         }
 
+        updateHolder(sender);
         return true;
     }
 
@@ -269,9 +272,12 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
             IWTON(WTON).swapToTON(
                 IERC20Upgradeable(WTON).balanceOf(address(this))
             );
-        total -= amount;
         _burn(_msgSender(), amount);
         IERC20Upgradeable(TON).safeTransfer(_msgSender(), amount);
+        unchecked {
+            total -= amount;
+            updateHolder(_msgSender());
+        }
     }
 
     /// @notice 펀드 모집에 실패했을 때 TBOND의 상태를 취소 상태로 변경, 펀드 모금 단계에서만 호출 가능
@@ -298,6 +304,17 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
         IERC20Upgradeable(token).safeTransfer(to, amount);
     }
 
+    function updateHolder(address account) public {
+        if (balanceOf(account) == 0 && hold[account]) {
+            hold[account] = false;
+            holder -= 1;
+        }
+        if (balanceOf(account) > 0 && hold[account] == false) {
+            hold[account] = true;
+            holder += 1;
+        }
+    }
+
     /// @notice 채권의 상태 정보 반환
     function info()
         external
@@ -308,6 +325,7 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
             uint256,
             uint256,
             FundStage,
+            uint256,
             uint256,
             uint256,
             uint256
@@ -321,7 +339,8 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
             stage,
             total,
             stakingPeriod,
-            created
+            created,
+            holder
         );
     }
 

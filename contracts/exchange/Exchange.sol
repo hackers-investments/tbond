@@ -12,6 +12,10 @@ interface IFactory {
     function bonds(uint256) external view returns (address);
 }
 
+interface IBond {
+    function updateHolder(address) external;
+}
+
 /// @title TBond 채권 거래소
 contract Exchange is Context, OnApprove, EIP712("TBond Exchange", "1.0") {
     using ECDSA for bytes32;
@@ -106,6 +110,8 @@ contract Exchange is Context, OnApprove, EIP712("TBond Exchange", "1.0") {
         IERC20(bond).safeTransferFrom(signer, sender, order.bondAmount);
         IERC20(WTON).safeTransferFrom(sender, signer, order.wtonAmount);
         used[signer][order.nonce] = true;
+        IBond(bond).updateHolder(signer);
+        IBond(bond).updateHolder(sender);
     }
 
     /// @notice 주문 취소
