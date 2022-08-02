@@ -121,14 +121,8 @@ task('view')
     log(
       `Stage: ${['NONE', 'FUNDRAISING', 'STAKING', 'UNSTAKING', 'END'][stage]}`
     );
-    log(
-      `Amount: ${fromTon(
-        (await ton.balanceOf(bond.address)).add(
-          (await wton.balanceOf(bond.address)).div(1e9)
-        )
-      )}`
-    );
-    log(`Bond: ${fromTon(total)}`);
+    log(`Target: ${fromTon(targetAmount)}`);
+    log(`Collected: ${fromTon(total)}`);
     log(`Stakable: ${stakable}`);
     log(`Unstakeable: ${unstakeable}`);
     log(`Withdrawable: ${withdrawable}`);

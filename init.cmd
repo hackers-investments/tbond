@@ -62,5 +62,5 @@ reset() { # temp command set for front dev
   factory
   exchange
   money 0x92Fb30eA18557A93cDB3a0f77796223e36FcEdDB
-  make 100 100 100
+  make 100 100 100000
 }
