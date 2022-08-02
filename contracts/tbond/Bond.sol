@@ -32,6 +32,7 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
     uint256 private stakable;
     address private incentiveTo;
     uint256 private total;
+    uint256 private created;
 
     enum FundStage {
         NONE,
@@ -109,6 +110,7 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
             stakingPeriod = _stakingPeriod;
             stakable = block.number + _fundraisingPeriod;
             incentiveTo = _incentiveTo;
+            created = block.timestamp;
         }
     }
 
@@ -307,6 +309,7 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
             uint256,
             FundStage,
             uint256,
+            uint256,
             uint256
         )
     {
@@ -317,7 +320,8 @@ contract Bond is ERC20Upgradeable, OwnableUpgradeable, OnApproveUpgradeable {
             withdrawable,
             stage,
             total,
-            stakingPeriod
+            stakingPeriod,
+            created
         );
     }
 
